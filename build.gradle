@@ -1,0 +1,104 @@
+plugins {
+    id 'java'
+}
+
+
+
+repositories {
+    mavenLocal()
+    maven {
+        url = 'https://repo.runelite.net'
+    }
+    mavenCentral()
+}
+
+def runeLiteVersion = 'latest.release'
+
+dependencies {
+    implementation 'org.tomlj:tomlj:1.1.1'
+    testImplementation 'org.tomlj:tomlj:1.1.1'
+
+    compileOnly group: 'net.runelite', name: 'client', version: runeLiteVersion
+
+    compileOnly 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
+
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.30'
+    testCompileOnly 'org.projectlombok:lombok:1.18.30'
+
+    testImplementation 'junit:junit:4.12'
+    testImplementation 'org.mockito:mockito-core:5.1.1'
+    testImplementation group: 'net.runelite', name: 'client', version: runeLiteVersion
+    testImplementation group: 'net.runelite', name: 'jshell', version: runeLiteVersion
+
+    // mocking and test injection used by runelite client
+    testImplementation group: "com.google.inject.extensions", name: "guice-testlib", version: "4.1.0", {
+        exclude group: "com.google.inject", module: "guice" // already provided by runelite client
+    }
+}
+
+group = 'cleanvisuals'
+version = '1.0.0'
+
+/**
+ * The jar to drop into .runelite/sideloaded-plugins.
+ *
+ * Bundles runtimeClasspath rather than testRuntimeClasspath, which is the difference between a
+ * plugin and a second copy of RuneLite: the client is a compileOnly dependency, so runtimeClasspath
+ * is this plugin plus tomlj and nothing else. The client already provides everything else at
+ * runtime, and bundling a second copy of it would at best waste 30MB and at worst load duplicate
+ * classes alongside the ones already running.
+ */
+tasks.register('sideloadJar', Jar) {
+    dependsOn configurations.runtimeClasspath
+    group = BasePlugin.BUILD_GROUP
+    description = 'Builds the jar for .runelite/sideloaded-plugins'
+
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from sourceSets.main.output
+    from {
+        configurations.runtimeClasspath.collect { file ->
+            file.isDirectory() ? file : zipTree(file)
+        }
+    }
+
+    // Signatures from the bundled dependencies no longer match once repackaged, and a stale
+    // signature file makes the JVM reject the jar outright.
+    exclude 'META-INF/INDEX.LIST'
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+    exclude '**/module-info.class'
+
+    archiveClassifier.set('')
+    archiveFileName.set("clean-visuals.jar")
+}
+
+// Launches the RuneLite dev client with this plugin side-loaded via
+// CleanVisualsPluginTest.main. Runs against the released net.runelite:client
+// artifact on the test runtime classpath, matching the plugin-hub workflow.
+tasks.register('runDev', JavaExec) {
+    group = 'application'
+    description = 'Runs the RuneLite dev client with this plugin side-loaded'
+
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'cleanvisuals.CleanVisualsPluginTest'
+
+    // -ea is mandatory: RuneLite.main() aborts with a "Developers should enable
+    // assertions" dialog if --developer-mode is passed without it.
+    jvmArgs '-ea', '-Xmx2048m', '-Xss2m', '-Djna.nosys=true'
+    args '--developer-mode'
+}
+
+
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+    options.release.set(11)
+}
+
+tasks.withType(Jar) {
+    exclude 'org/tomlj/TomlCommand.class'
+    exclude 'org/antlr/v4/runtime/misc/TestRig.class'
+}
+
