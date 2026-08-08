@@ -76,36 +76,20 @@ public class BackgroundsPanel extends PluginPanel
 		JPanel content = new JPanel();
 		content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
 
-		// Video import widths are roughly each region's own, since frames are held decoded and
-		// anything larger is scaled back down at draw time regardless.
 		pickers = List.of(
 			new RegionImagePicker(configManager, presetManager, "Chatbox",
-				"chatboxImagePath", Preset.REGION_CHATBOX, 520),
+				"chatboxImagePath", Preset.REGION_CHATBOX),
 			new RegionImagePicker(configManager, presetManager, "Side panel",
-				"invImagePath", Preset.REGION_INVENTORY, 260),
+				"invImagePath", Preset.REGION_INVENTORY),
 			new RegionImagePicker(configManager, presetManager, "Login screen",
-				"loginImagePath", Preset.REGION_LOGIN, 800));
+				"loginImagePath", Preset.REGION_LOGIN));
 		pickers.forEach(content::add);
 
-		JLabel hint = new JLabel("<html>PNG, JPG, GIF or BMP.<br>"
-			+ "Video needs ffmpeg installed; it is converted to frames on import.<br>"
+		JLabel hint = new JLabel("<html>PNG, JPG, GIF or BMP. Animated GIFs play.<br>"
 			+ "Framing controls are in the plugin's config.</html>");
 		hint.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
 		hint.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
 		content.add(hint);
-
-		JButton cleanup = new JButton("Manage stored files...");
-		cleanup.setToolTipText("See what images and videos are stored, and free up space");
-		cleanup.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
-		cleanup.addActionListener(e ->
-		{
-			AssetCleanupDialog.show(this, RegionImagePicker.ASSETS_DIR, presetManager);
-			// Something in use may have been deleted from underneath a picker, so previews are
-			// re-read rather than left showing an image that is no longer there.
-			refresh();
-		});
-		content.add(cleanup);
-		content.add(javax.swing.Box.createVerticalStrut(10));
 
 		content.add(buildPresetSection());
 

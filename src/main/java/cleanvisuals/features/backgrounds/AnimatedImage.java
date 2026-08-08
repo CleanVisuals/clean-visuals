@@ -30,10 +30,7 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import javax.imageio.ImageIO;
@@ -55,10 +52,21 @@ import org.w3c.dom.Node;
 public class AnimatedImage
 {
 	/**
-	 * Beyond this, frames are dropped. A decoded frame costs width * height * 4 bytes, so an
-	 * unbounded frame count on a large GIF is an easy way to exhaust the heap.
+	 * Memory budget for one animation's decoded frames, in bytes.
+	 * <p>
+	 * Frame count is the wrong unit for this. Frames cost {@code width * height * 4}, and GIFs
+	 * differ by more than a factor of ten in frame size -- 300 frames is 81MB of chatbox-sized
+	 * GIF and over a gigabyte at 1280x720, the same number meaning "comfortable" for one file
+	 * and "out of heap" for another. Budgeting bytes lets a small GIF run for minutes while a
+	 * large one is still held to something the heap can take.
 	 */
-	private static final int MAX_FRAMES = 300;
+	private static final long FRAME_BUDGET_BYTES = 256L * 1024 * 1024;
+
+	/**
+	 * Sanity ceiling on frame count, independent of the byte budget. Guards against a file of
+	 * thousands of tiny frames producing an animation nobody wants to sit through.
+	 */
+	private static final int MAX_FRAMES = 2000;
 
 	/**
 	 * Frames are downscaled to fit this on load. Source resolution well beyond the region it
@@ -77,30 +85,6 @@ public class AnimatedImage
 	 * Floor on frame time, so a pathological file cannot ask to be redrawn every millisecond.
 	 */
 	private static final int MIN_DELAY_MS = 20;
-
-	/**
-	 * Playback rate for a frame-sequence folder with no {@code fps.txt}. Matches the {@code fps=15}
-	 * in the documented ffmpeg command, so the default case needs no configuration at all.
-	 * Imported video writes its own {@code fps.txt}, so this only applies to hand-made folders.
-	 */
-	private static final int SEQUENCE_FPS = 15;
-
-	/**
-	 * Memory budget for a frame sequence, in bytes.
-	 * <p>
-	 * A flat frame count is the wrong unit here. Frames cost {@code width * height * 4}, so 300 of
-	 * them is 45MB for a 260px side panel and 430MB for an 800px login screen -- the same number
-	 * meaning "comfortable" in one region and "out of heap" in another. Budgeting bytes instead
-	 * lets a small region hold minutes of video while a large one is still held to something the
-	 * heap can take.
-	 */
-	private static final long SEQUENCE_BUDGET_BYTES = 320L * 1024 * 1024;
-
-	/**
-	 * Sanity ceiling on a sequence, independent of the byte budget. Guards against a folder of
-	 * thousands of tiny frames producing an animation nobody wants to sit through.
-	 */
-	private static final int MAX_SEQUENCE_FRAMES = 3000;
 
 	private final List<BufferedImage> frames;
 	private final List<Integer> delaysMs;
@@ -198,121 +182,6 @@ public class AnimatedImage
 		}
 	}
 
-	/**
-	 * Loads a folder of numbered image files as one animation -- the video path.
-	 * <p>
-	 * Decoding video in-client was considered and rejected. Java has no built-in decoder; the only
-	 * dependency small enough to justify (JCodec) handles H.264 baseline profile alone, which most
-	 * mp4 files are not, and streaming decode would need a background thread, a bounded frame
-	 * buffer and keyframe seeking to loop. That is a subsystem. This is a loop over
-	 * {@code ImageIO.read}, and the conversion happens once, outside the client:
-	 * <pre>
-	 * ffmpeg -i clip.mp4 -vf "fps=15,scale=520:-1" frames/%04d.png
-	 * </pre>
-	 * Frames play at {@link #SEQUENCE_FPS} unless the folder contains an {@code fps.txt} holding a
-	 * single number. Keep the {@code fps=} above and that file in agreement, or playback runs fast
-	 * or slow by exactly their ratio.
-	 * <p>
-	 * Scale the export to roughly the region's width. Frames are held decoded, so a 520-wide
-	 * sequence costs about 290KB each and a 1280-wide one about ten times that, against a 512MB
-	 * heap.
-	 */
-	public static AnimatedImage loadSequence(File directory) throws IOException
-	{
-		File[] entries = directory.listFiles(f -> f.isFile() && isImage(f.getName()));
-		if (entries == null || entries.length == 0)
-		{
-			throw new IOException("No image files in " + directory.getName());
-		}
-
-		// Lexicographic, which is why the ffmpeg pattern above zero-pads: %04d sorts correctly as
-		// text where %d puts frame 10 before frame 2.
-		Arrays.sort(entries, Comparator.comparing(File::getName));
-
-		int count = Math.min(entries.length, MAX_SEQUENCE_FRAMES);
-		int delayMs = Math.max(MIN_DELAY_MS, Math.round(1000f / readFps(directory)));
-
-		List<BufferedImage> frames = new ArrayList<>(count);
-		List<Integer> delays = new ArrayList<>(count);
-		long bytes = 0;
-
-		for (int i = 0; i < count; i++)
-		{
-			BufferedImage frame = ImageIO.read(entries[i]);
-			if (frame == null)
-			{
-				// Skip rather than fail: one unreadable frame in a few hundred should not cost the
-				// whole animation.
-				log.warn("Could not decode {}", entries[i].getName());
-				continue;
-			}
-
-			BufferedImage scaled = scaleForMemory(toArgb(frame));
-			bytes += (long) scaled.getWidth() * scaled.getHeight() * 4;
-
-			// Checked after adding at least one frame, so an oversized single frame still loads
-			// rather than producing an empty animation.
-			if (bytes > SEQUENCE_BUDGET_BYTES && !frames.isEmpty())
-			{
-				log.warn("{} exceeds the {}MB frame budget; stopping at {} of {} frames",
-					directory.getName(), SEQUENCE_BUDGET_BYTES / (1024 * 1024),
-					frames.size(), entries.length);
-				break;
-			}
-
-			frames.add(scaled);
-			delays.add(delayMs);
-		}
-
-		if (entries.length > frames.size())
-		{
-			log.warn("{} has {} frames; using {}", directory.getName(), entries.length, frames.size());
-		}
-
-		if (frames.isEmpty())
-		{
-			throw new IOException("No decodable frames in " + directory.getName());
-		}
-
-		return new AnimatedImage(frames, delays);
-	}
-
-	private static boolean isImage(String name)
-	{
-		String lower = name.toLowerCase();
-		return lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg")
-			|| lower.endsWith(".bmp") || lower.endsWith(".gif");
-	}
-
-	private static int readFps(File directory)
-	{
-		File file = new File(directory, "fps.txt");
-		if (!file.isFile())
-		{
-			return SEQUENCE_FPS;
-		}
-
-		try
-		{
-			int fps = Integer.parseInt(Files.readString(file.toPath()).trim());
-			return fps > 0 ? fps : SEQUENCE_FPS;
-		}
-		catch (IOException | NumberFormatException e)
-		{
-			log.warn("Unreadable fps.txt in {}, using {}", directory.getName(), SEQUENCE_FPS);
-			return SEQUENCE_FPS;
-		}
-	}
-
-	/**
-	 * JPEG frames decode without an alpha channel, which the draw path expects. GIF loading gets
-	 * this for free by compositing onto an ARGB canvas; a sequence has no canvas to composite on.
-	 */
-	private static BufferedImage toArgb(BufferedImage source)
-	{
-		return source.getType() == BufferedImage.TYPE_INT_ARGB ? source : copy(source);
-	}
-
 	private static AnimatedImage read(ImageReader reader, File file) throws IOException
 	{
 		int available = reader.getNumImages(true);
@@ -329,6 +198,7 @@ public class AnimatedImage
 
 		List<BufferedImage> frames = new ArrayList<>(count);
 		List<Integer> delays = new ArrayList<>(count);
+		long bytes = 0;
 
 		// Logical screen size: partial frames are positioned within this, not within the
 		// previous frame.
@@ -355,7 +225,20 @@ public class AnimatedImage
 			}
 
 			canvasGraphics.drawImage(raw, info.x, info.y, null);
-			frames.add(scaleForMemory(copy(canvas)));
+
+			BufferedImage scaled = scaleForMemory(copy(canvas));
+			bytes += (long) scaled.getWidth() * scaled.getHeight() * 4;
+
+			// Checked after at least one frame is held, so a single oversized frame still loads
+			// as a still rather than producing an empty animation.
+			if (bytes > FRAME_BUDGET_BYTES && !frames.isEmpty())
+			{
+				log.warn("{} exceeds the {}MB frame budget; stopping at {} of {} frames",
+					file.getName(), FRAME_BUDGET_BYTES / (1024 * 1024), frames.size(), count);
+				break;
+			}
+
+			frames.add(scaled);
 			delays.add(info.delayMs);
 
 			switch (info.disposal)

@@ -2,7 +2,7 @@
 
 Custom backgrounds and interface theming for RuneLite.
 
-Put an image, GIF or video behind the chatbox, the side panel and the login screen, and recolour
+Put an image or animated GIF behind the chatbox, the side panel and the login screen, and recolour
 or hide the surrounding game frame.
 
 ---
@@ -28,39 +28,26 @@ also the trade and bank backdrop; button backgrounds appear in every interface w
 This is inherent to the mechanism, not something the plugin can scope. Enable one option at a
 time and check the bank before committing to a look.
 
-### Video needs ffmpeg installed separately
+### How long a GIF can be
 
-The plugin does not decode video and does not bundle a decoder. Video is converted to still
-frames **on import** by calling [ffmpeg](https://www.gyan.dev/ffmpeg/builds/), which must already
-be on your machine. `ffprobe` is used too; it ships in the same builds.
+Frames are held decoded, so the limit is **memory, not seconds**. A frame costs
+`width × height × 4` bytes, and loading stops at a **256MB budget** — which means how long a GIF
+can run depends on how big its frames are:
 
-ffmpeg is found on `PATH`. Failing that, these are checked — **Windows paths only**, so on macOS
-or Linux it must be on `PATH`:
+| GIF size | Per frame | Frames that fit | At 5fps | At 10fps |
+|---|---|---|---|---|
+| 520×130 | ~270KB | ~950 | ~3m 10s | ~1m 35s |
+| 500×300 | ~600KB | ~425 | ~1m 25s | ~42s |
+| 1280×720 | ~3.7MB | ~70 | ~14s | ~7s |
 
-```
-C:\ffmpeg\bin\ffmpeg.exe
-C:\Program Files\ffmpeg\bin\ffmpeg.exe
-%USERPROFILE%\scoop\shims\ffmpeg.exe
-```
+**Sizing a GIF to the region it fills is what buys length.** A chatbox is a few hundred pixels
+wide, so a chatbox-shaped GIF runs for minutes while a 1080p one runs for seconds.
 
-There is **no audio**.
+Going over the budget **truncates the animation** rather than failing — it loops on what fitted,
+and a line in the client log says how many frames were kept. Frames are also downscaled so the
+longest side is at most 1280px, and a hard ceiling of 2000 frames applies regardless of size.
 
-### Memory
-
-Animation frames are held decoded, budgeted at **320MB**. A frame costs `width × height × 4`
-bytes, so how much video fits depends on the region and the clip's aspect ratio:
-
-| Region | Import width | 16:9 clip at 15fps | at 5fps |
-|---|---|---|---|
-| Side panel | 260px | ~2m 27s | ~7m |
-| Chatbox | 520px | ~45s | ~2m 15s |
-| Login screen | 800px | ~19s | ~57s |
-
-A portrait clip gets roughly a third of a landscape one at the same width, because height is what
-consumes the budget. Exceeding it **truncates the clip** rather than failing.
-
-RuneLite's default heap does not comfortably hold 320MB of frames alongside the game. Raise
-`-Xmx` if you use long videos.
+There is **no audio**, and video files are not supported.
 
 ### Side panel border removal is stone only
 
@@ -83,7 +70,7 @@ own sprites, outside the override path, so they cannot be hidden, recoloured or 
 
 Three regions, configured independently: **chatbox**, **side panel**, **login screen**.
 
-- Images (PNG, JPG, BMP), animated GIFs, and video
+- Images (PNG, JPG, BMP) and animated GIFs
 - Fit modes — fill, fit, stretch, tile — with zoom and focal point
 - Hue, saturation and greyscale adjustment
 - Separate image opacity and region see-through controls
@@ -106,47 +93,16 @@ Save and load complete looks — all three regions plus every Game UI setting �
 
 ---
 
-## Using video
-
-**Choose video** opens an import dialog with a start position, previewed as an actual frame, and
-a frame rate. The end point is shown and derived from the frame budget.
-
-Notes:
-
-- **Lower frame rates buy duration** for the same memory *and* less disk. 15, 12, 10, 8 and 5 are
-  offered.
-- **Seeking is keyframe-accurate**, so playback may begin slightly before the position you picked.
-  Exact seeking would mean decoding everything skipped.
-- **One clip per region.** Re-importing replaces that region's frames; the folder is cleared first
-  so old frames cannot be spliced into the new animation.
-- **Changing start or frame rate requires re-importing** — both are extraction settings.
-
-### Frame folders made by hand
-
-Pointing a region's image path at a **folder** loads it as a frame sequence. Numbered files, in
-name order:
-
-```
-ffmpeg -i clip.mp4 -vf "fps=15,scale=520:-1" frames/%04d.png
-```
-
-Zero-padding matters — sorting is by name, so `%d` puts frame 10 before frame 2. Frames play at
-15fps unless the folder holds an `fps.txt` containing a single number. Keep that and the `fps=`
-above in agreement, or playback runs fast or slow by exactly their ratio. Imported video writes
-its own `fps.txt`.
-
----
-
 ## Storage
 
 ```
-.runelite/clean-visuals/assets     imported images and video frames
+.runelite/clean-visuals/assets     imported images and GIFs
 .runelite/clean-visuals/presets    saved presets
 ```
 
-Assets accumulate — every image picked is copied in and kept. **Manage stored files**, in the
-plugin's side panel, lists everything with its size, marks what a preset or your current settings
-still reference, and deletes only what you tick. Nothing is deleted automatically.
+Every image you pick is **copied into the assets folder**, so a saved preset keeps working if you
+move or delete the original. Nothing is ever deleted for you — if the folder grows, tidy it in
+your file manager.
 
 ---
 

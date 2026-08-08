@@ -183,7 +183,7 @@ public abstract class RegionBackgroundOverlay extends Overlay implements PluginL
 		// which needed an entirely separate strategy: compose a region-sized sprite and install
 		// it, rather than draw per frame. That strategy could never animate -- rebuilding the
 		// sprite every frame means resetting the shared widget sprite cache every frame, forcing
-		// a re-decode of every widget sprite in the client -- so GIFs and video showed their
+		// a re-decode of every widget sprite in the client -- so GIFs showed their
 		// first frame and nothing else. Dropping the layout removes the limitation with it.
 		if (!client.isResized())
 		{

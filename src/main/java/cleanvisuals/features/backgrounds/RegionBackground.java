@@ -106,7 +106,7 @@ public class RegionBackground
 		}
 
 		File file = new File(normalised);
-		if (!file.isFile() && !file.isDirectory())
+		if (!file.isFile())
 		{
 			log.warn("Background image not found: {} -- using test pattern", normalised);
 			setAnimation(AnimatedImage.still(testPattern()));
@@ -115,11 +115,7 @@ public class RegionBackground
 
 		try
 		{
-			// A directory is a frame sequence -- the video path. Everything downstream is
-			// frame-based already, so a sequence and a GIF are the same thing from here on.
-			AnimatedImage loaded = file.isDirectory()
-				? AnimatedImage.loadSequence(file)
-				: AnimatedImage.load(file);
+			AnimatedImage loaded = AnimatedImage.load(file);
 			setAnimation(loaded);
 
 			if (loaded.isAnimated())
@@ -265,7 +261,7 @@ public class RegionBackground
 		}
 
 		// Same frame as last time, on an animation too large to cache in full. This is the common
-		// case while a video plays: the frame index only advances every few renders.
+		// case while a GIF plays: the frame index only advances every few renders.
 		if (lastComposed != null && lastComposedIndex == frameIndex)
 		{
 			return lastComposed;

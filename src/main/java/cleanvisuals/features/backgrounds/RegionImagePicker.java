@@ -36,8 +36,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.Arrays;
-import java.util.Comparator;
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
@@ -47,7 +45,6 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
-import javax.swing.SwingUtilities;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.JFileChooser;
 import lombok.extern.slf4j.Slf4j;
@@ -77,27 +74,18 @@ public class RegionImagePicker extends JPanel
 	private final String configKey;
 	private final String regionId;
 
-	/**
-	 * Width that imported video is scaled to. Frames are held decoded, so this is the main lever
-	 * on memory -- roughly the region's own width is plenty, since anything larger is scaled back
-	 * down at draw time anyway.
-	 */
-	private final int videoWidth;
-
 	private final JLabel preview = new JLabel();
 	private final JLabel filename = new JLabel();
-	private final JButton chooseVideo = new JButton("Choose video");
 
 	private static File lastDirectory;
 
 	RegionImagePicker(ConfigManager configManager, PresetManager presetManager, String title,
-		String configKey, String regionId, int videoWidth)
+		String configKey, String regionId)
 	{
 		this.configManager = configManager;
 		this.presetManager = presetManager;
 		this.configKey = configKey;
 		this.regionId = regionId;
-		this.videoWidth = videoWidth;
 
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 		setBorder(BorderFactory.createEmptyBorder(0, 0, 12, 0));
@@ -132,17 +120,15 @@ public class RegionImagePicker extends JPanel
 		buttons.add(clear);
 		add(buttons);
 
-		JPanel videoRow = new JPanel(new GridLayout(1, 2, 4, 0));
-		videoRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
-		videoRow.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
-		chooseVideo.addActionListener(e -> chooseVideo());
-		videoRow.add(chooseVideo);
+		JPanel resetRow = new JPanel(new GridLayout(1, 1, 4, 0));
+		resetRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
+		resetRow.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
 
 		JButton reset = new JButton("Reset");
 		reset.setToolTipText("Restore framing, colour and opacity to defaults. Keeps the image");
 		reset.addActionListener(e -> presetManager.resetRegion(regionId));
-		videoRow.add(reset);
-		add(videoRow);
+		resetRow.add(reset);
+		add(resetRow);
 
 		refresh();
 	}
@@ -188,90 +174,6 @@ public class RegionImagePicker extends JPanel
 	}
 
 	/**
-	 * Picks a video and converts it to a frame folder, which the loader treats exactly like a GIF.
-	 * <p>
-	 * Conversion runs on a worker thread. It takes seconds to minutes depending on the clip, and
-	 * doing it inline would freeze the client for that whole time -- this panel runs on the event
-	 * thread, and so does the game's UI.
-	 */
-	private void chooseVideo()
-	{
-		if (!VideoImporter.isAvailable())
-		{
-			JOptionPane.showMessageDialog(this,
-				"Video import needs ffmpeg, which was not found.\n\n"
-					+ "Install it with:  winget install ffmpeg\n"
-					+ "then restart the client.",
-				"ffmpeg not installed", JOptionPane.WARNING_MESSAGE);
-			return;
-		}
-
-		JFileChooser chooser = new JFileChooser();
-		chooser.setDialogTitle("Choose a background video");
-		chooser.setCurrentDirectory(lastDirectory);
-		chooser.setAcceptAllFileFilterUsed(false);
-		chooser.addChoosableFileFilter(new FileNameExtensionFilter(
-			"Video (mp4, mov, webm, mkv, avi, gif)", "mp4", "mov", "webm", "mkv", "avi", "gif"));
-
-		if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION)
-		{
-			return;
-		}
-
-		File selected = chooser.getSelectedFile();
-		lastDirectory = selected.getParentFile();
-
-		VideoImportDialog.Result choice = VideoImportDialog.show(this, selected, videoWidth);
-		if (choice == null)
-		{
-			return;
-		}
-
-		// One folder per region rather than per file, so re-importing replaces the previous clip
-		// instead of leaving orphaned frame folders behind.
-		Path target = ASSETS_DIR.resolve(configKey + "-video");
-
-		chooseVideo.setEnabled(false);
-		chooseVideo.setText("Converting...");
-
-		new Thread(() ->
-		{
-			String error = null;
-			try
-			{
-				VideoImporter.extract(selected, target, videoWidth,
-					choice.getFps(), choice.getStartSeconds());
-			}
-			catch (IOException | RuntimeException e)
-			{
-				log.warn("Failed to import background video {}", selected, e);
-				error = e.getMessage();
-			}
-
-			String message = error;
-			SwingUtilities.invokeLater(() ->
-			{
-				chooseVideo.setEnabled(true);
-				chooseVideo.setText("Choose video");
-
-				if (message != null)
-				{
-					JOptionPane.showMessageDialog(this,
-						"Could not import that video:\n" + message,
-						"Import failed", JOptionPane.ERROR_MESSAGE);
-					return;
-				}
-
-				// Cleared first to force a reload. Every import writes to the same per-region
-				// folder, so importing a different video leaves the path byte-identical, and the
-				// loader skips unchanged paths -- without this the old clip keeps playing.
-				setImagePath("");
-				setImagePath(target.toString());
-			});
-		}, "resource-packs-video-import").start();
-	}
-
-	/**
 	 * Copies the chosen file into the plugin's assets directory, so a saved setup does not
 	 * depend on wherever the user happened to pick the file from.
 	 */
@@ -301,35 +203,22 @@ public class RegionImagePicker extends JPanel
 		}
 
 		File file = new File(path.trim());
+		filename.setText(file.getName());
 
-		// A folder is an imported video. Preview its first frame and report the frame count, since
-		// the folder name alone says nothing about whether the import actually produced anything.
-		File previewFile = file;
-		if (file.isDirectory())
+		// A path can outlive what it points at -- the file deleted, or a preset saved on another
+		// machine. ImageIO throws rather than returning null for those, so they are answered here
+		// instead of as a caught exception on a perfectly ordinary condition.
+		if (!file.isFile())
 		{
-			int frames = VideoImporter.countFrames(file.toPath());
-			filename.setText(file.getName() + " (" + frames + " frames)");
-
-			File[] entries = file.listFiles(f -> f.getName().endsWith(".png"));
-			if (entries == null || entries.length == 0)
-			{
-				preview.setIcon(null);
-				preview.setText("Empty folder");
-				return;
-			}
-
-			Arrays.sort(entries, Comparator.comparing(File::getName));
-			previewFile = entries[0];
-		}
-		else
-		{
-			filename.setText(file.getName());
+			preview.setIcon(null);
+			preview.setText("File not found");
+			return;
 		}
 
 		BufferedImage image = null;
 		try
 		{
-			image = ImageIO.read(previewFile);
+			image = ImageIO.read(file);
 		}
 		catch (IOException e)
 		{
