@@ -105,8 +105,11 @@ public class RegionBackground
 			return;
 		}
 
+		// This string comes straight from config, which a preset applied from someone else's
+		// shared file can also write to -- so it is checked against the plugin's own asset
+		// directory before being opened, the same as RegionImagePicker's preview checks it.
 		File file = new File(normalised);
-		if (!file.isFile())
+		if (!RegionImagePicker.isInsideAssetsDir(file) || !file.isFile())
 		{
 			log.warn("Background image not found: {} -- using test pattern", normalised);
 			setAnimation(AnimatedImage.still(testPattern()));

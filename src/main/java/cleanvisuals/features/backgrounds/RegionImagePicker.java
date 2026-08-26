@@ -63,6 +63,10 @@ import net.runelite.client.ui.PluginPanel;
 @Slf4j
 public class RegionImagePicker extends JPanel
 {
+	/**
+	 * Where every background image lives. The only file i/o this plugin does with a
+	 * user-supplied path is into and out of here.
+	 */
 	static final Path ASSETS_DIR = Path.of(
 		net.runelite.client.RuneLite.RUNELITE_DIR.getPath(), "clean-visuals", "assets");
 
@@ -208,7 +212,11 @@ public class RegionImagePicker extends JPanel
 		// A path can outlive what it points at -- the file deleted, or a preset saved on another
 		// machine. ImageIO throws rather than returning null for those, so they are answered here
 		// instead of as a caught exception on a perfectly ordinary condition.
-		if (!file.isFile())
+		//
+		// A preset is a document you can receive from someone else, and it can claim any path as
+		// an image's location -- so a path pointing outside the assets directory is refused here
+		// too, the same as one that no longer exists, rather than opened.
+		if (!isInsideAssetsDir(file) || !file.isFile())
 		{
 			preview.setIcon(null);
 			preview.setText("File not found");
@@ -234,6 +242,19 @@ public class RegionImagePicker extends JPanel
 
 		preview.setText(null);
 		preview.setIcon(new ImageIcon(scaleToFit(image)));
+	}
+
+	/**
+	 * Whether {@code file} is a direct child of {@link #ASSETS_DIR}, the only kind of path
+	 * {@link #importAsset} ever produces.
+	 * <p>
+	 * Used to guard every place a config-supplied path is opened, since config is not only
+	 * written by {@link #importAsset} -- applying a preset writes it too, and a preset is a
+	 * document you can receive from someone else.
+	 */
+	static boolean isInsideAssetsDir(File file)
+	{
+		return ASSETS_DIR.equals(file.toPath().toAbsolutePath().normalize().getParent());
 	}
 
 	/**
