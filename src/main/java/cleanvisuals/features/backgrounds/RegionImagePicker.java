@@ -25,10 +25,9 @@
 
 package cleanvisuals.features.backgrounds;
 
-import java.awt.Color;
+import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
-import java.awt.GridLayout;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -36,11 +35,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.Set;
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
-import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -51,14 +52,23 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.config.ConfigManager;
 import cleanvisuals.CleanVisualsConfig;
 import cleanvisuals.features.presets.PresetManager;
+import cleanvisuals.ui.CollapsibleSection;
+import cleanvisuals.ui.ImagePreview;
+import cleanvisuals.ui.PanelComponents;
+import cleanvisuals.ui.SliderRow;
 import net.runelite.client.ui.ColorScheme;
+import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.PluginPanel;
 
 /**
- * Image picker for a single region: preview, choose and clear.
+ * Everything for one region: preview, image choice, framing and colour.
  * <p>
- * One of these per region, so adding the bank or login screen is a single extra instance
- * rather than another copy of this code.
+ * Config keys all follow the region's prefix, so a region is described here by that prefix
+ * alone rather than by ten key names repeated three times over.
+ * <p>
+ * These controls used to live in the config screen, a screen away from the image they applied
+ * to. Here they sit under the preview, and since the overlay re-reads config every frame, a
+ * drag shows in game as it happens.
  */
 @Slf4j
 public class RegionImagePicker extends JPanel
@@ -70,81 +80,225 @@ public class RegionImagePicker extends JPanel
 	static final Path ASSETS_DIR = Path.of(
 		net.runelite.client.RuneLite.RUNELITE_DIR.getPath(), "clean-visuals", "assets");
 
-	private static final int PREVIEW_WIDTH = PluginPanel.PANEL_WIDTH - 20;
-	private static final int PREVIEW_HEIGHT = 80;
+	private static final int PREVIEW_WIDTH = PluginPanel.PANEL_WIDTH - 32;
+	private static final int PREVIEW_HEIGHT = 64;
+	private static final int LABEL_WIDTH = 62;
 
 	private final ConfigManager configManager;
 	private final PresetManager presetManager;
-	private final String configKey;
 	private final String regionId;
+
+	private final String pathKey;
+	private final String fitKey;
+	private final String zoomKey;
+	private final String focalXKey;
+	private final String focalYKey;
+	private final String imageOpacityKey;
+	private final String transparencyKey;
+	private final String hueKey;
+	private final String saturationKey;
+	private final String grayscaleKey;
 
 	private final JLabel preview = new JLabel();
 	private final JLabel filename = new JLabel();
+	private final JComboBox<ImageFit> fit = new JComboBox<>(ImageFit.values());
+	private final JCheckBox grayscale = PanelComponents.checkBox("Black & white",
+		"Converts the image to greyscale. Overrides hue and saturation");
+
+	private final SliderRow zoom;
+	private final SliderRow focalX;
+	private final SliderRow focalY;
+	private final SliderRow imageOpacity;
+	private final SliderRow transparency;
+	private final SliderRow hue;
+	private final SliderRow saturation;
+
+	/**
+	 * Whether the region blends with what is behind it. The login screen is handed to the client
+	 * as a whole-screen sprite with nothing behind it, so opacity there would control nothing --
+	 * and the overlay does not read those keys.
+	 */
+	private final boolean supportsOpacity;
+
+	/**
+	 * True while the controls are being filled in from config, so those values are not written
+	 * straight back out again.
+	 */
+	private boolean updating;
+
+	/**
+	 * The path the preview is currently showing, so a redraw for an unchanged image can be
+	 * skipped entirely rather than re-decoding the file.
+	 */
+	private String previewedPath;
 
 	private static File lastDirectory;
 
-	RegionImagePicker(ConfigManager configManager, PresetManager presetManager, String title,
-		String configKey, String regionId)
+	RegionImagePicker(ConfigManager configManager, PresetManager presetManager, String prefix,
+		String regionId, boolean supportsOpacity)
 	{
 		this.configManager = configManager;
 		this.presetManager = presetManager;
-		this.configKey = configKey;
 		this.regionId = regionId;
+		this.supportsOpacity = supportsOpacity;
+
+		this.pathKey = prefix + "ImagePath";
+		this.fitKey = prefix + "Fit";
+		this.zoomKey = prefix + "Zoom";
+		this.focalXKey = prefix + "FocalX";
+		this.focalYKey = prefix + "FocalY";
+		this.imageOpacityKey = prefix + "ImageOpacity";
+		this.transparencyKey = prefix + "WidgetTransparency";
+		this.hueKey = prefix + "Hue";
+		this.saturationKey = prefix + "Saturation";
+		this.grayscaleKey = prefix + "Grayscale";
+
+		this.zoom = new SliderRow("Zoom", 10, 400, "Zoom relative to the fitted size, as a percentage. 100 = as Fit produced it", v -> write(zoomKey, v));
+		this.focalX = new SliderRow("Pos X", 0, 100, "Which point of the image sits at the centre. 0 = left edge, 100 = right edge", v -> write(focalXKey, v));
+		this.focalY = new SliderRow("Pos Y", 0, 100, "Which point of the image sits at the centre. 0 = top edge, 100 = bottom edge", v -> write(focalYKey, v));
+		this.imageOpacity = new SliderRow("Opacity", 0, 100, "How strongly the image is drawn, as a percentage. 100 = fully visible", v -> write(imageOpacityKey, v));
+		this.transparency = new SliderRow("See-thru", 0, 100, "How see-through this region's own background becomes. 0 = unchanged, 100 = fully see-through", v -> write(transparencyKey, v));
+		this.hue = new SliderRow("Hue", -180, 180, "Rotates colours around the colour wheel, in degrees. 0 = unchanged", v -> write(hueKey, v));
+		this.saturation = new SliderRow("Satur.", 0, 200, "Saturation as a percentage. 0 = grey, 100 = unchanged, 200 = double intensity", v -> write(saturationKey, v));
 
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-		setBorder(BorderFactory.createEmptyBorder(0, 0, 12, 0));
+		setBackground(ColorScheme.DARKER_GRAY_COLOR);
 
-		JLabel heading = new JLabel(title);
-		heading.setForeground(Color.WHITE);
-		heading.setBorder(BorderFactory.createEmptyBorder(0, 0, 6, 0));
-		add(heading);
-
-		preview.setHorizontalAlignment(SwingConstants.CENTER);
-		preview.setVerticalAlignment(SwingConstants.CENTER);
-		preview.setPreferredSize(new Dimension(PREVIEW_WIDTH, PREVIEW_HEIGHT));
-		preview.setMaximumSize(new Dimension(Integer.MAX_VALUE, PREVIEW_HEIGHT));
-		preview.setBorder(BorderFactory.createLineBorder(ColorScheme.DARK_GRAY_COLOR));
-		preview.setOpaque(true);
-		preview.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-		add(preview);
-
-		filename.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
-		filename.setBorder(BorderFactory.createEmptyBorder(4, 0, 4, 0));
-		add(filename);
-
-		JPanel buttons = new JPanel(new GridLayout(1, 2, 4, 0));
-		buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
-
-		JButton choose = new JButton("Choose image");
-		choose.addActionListener(e -> chooseImage());
-		buttons.add(choose);
-
-		JButton clear = new JButton("Clear");
-		clear.addActionListener(e -> setImagePath(""));
-		buttons.add(clear);
-		add(buttons);
-
-		JPanel resetRow = new JPanel(new GridLayout(1, 1, 4, 0));
-		resetRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
-		resetRow.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
-
-		JButton reset = new JButton("Reset");
-		reset.setToolTipText("Restore framing, colour and opacity to defaults. Keeps the image");
-		reset.addActionListener(e -> presetManager.resetRegion(regionId));
-		resetRow.add(reset);
-		add(resetRow);
+		buildPreview();
+		buildImageButtons();
+		buildFraming();
+		buildColour();
+		buildReset();
 
 		refresh();
 	}
 
-	void refresh()
+	private void buildPreview()
 	{
-		updatePreview(configManager.getConfiguration(CleanVisualsConfig.GROUP_NAME, configKey));
+		preview.setHorizontalAlignment(SwingConstants.CENTER);
+		preview.setVerticalAlignment(SwingConstants.CENTER);
+		preview.setFont(FontManager.getRunescapeSmallFont());
+		preview.setPreferredSize(new Dimension(PREVIEW_WIDTH, PREVIEW_HEIGHT));
+		preview.setMaximumSize(new Dimension(Integer.MAX_VALUE, PREVIEW_HEIGHT));
+		preview.setBorder(BorderFactory.createLineBorder(ColorScheme.BORDER_COLOR));
+		preview.setOpaque(true);
+		preview.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		add(preview);
+
+		filename.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+		filename.setFont(FontManager.getRunescapeSmallFont());
+		filename.setBorder(BorderFactory.createEmptyBorder(3, 0, 0, 0));
+		filename.setMaximumSize(new Dimension(Integer.MAX_VALUE, 16));
+		add(filename);
 	}
 
-	String getConfigKey()
+	private void buildImageButtons()
 	{
-		return configKey;
+		add(PanelComponents.buttonRow(
+			PanelComponents.flatButton("Choose", this::chooseImage),
+			PanelComponents.flatButton("Clear", () -> setImagePath(""))));
+	}
+
+	private void buildFraming()
+	{
+		PanelComponents.style(fit);
+		fit.addActionListener(e ->
+		{
+			Object selected = fit.getSelectedItem();
+			if (!updating && selected instanceof ImageFit)
+			{
+				write(fitKey, ((ImageFit) selected).name());
+			}
+		});
+
+		JLabel label = new JLabel("Fit");
+		label.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+		label.setFont(FontManager.getRunescapeSmallFont());
+		label.setPreferredSize(new Dimension(LABEL_WIDTH, 22));
+
+		JPanel row = new JPanel(new BorderLayout(4, 0));
+		row.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		row.setBorder(BorderFactory.createEmptyBorder(6, 0, 2, 0));
+		row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
+		row.add(label, BorderLayout.WEST);
+		row.add(fit, BorderLayout.CENTER);
+		add(row);
+
+		add(zoom);
+		add(focalX);
+		add(focalY);
+
+		if (supportsOpacity)
+		{
+			add(imageOpacity);
+			add(transparency);
+		}
+	}
+
+	/**
+	 * Hue, saturation and greyscale behind their own header: they are the least reached for of
+	 * the controls, and leaving them open would push the reset button off the bottom.
+	 */
+	private void buildColour()
+	{
+		CollapsibleSection colour = new CollapsibleSection("Colour", null);
+		colour.getContent().add(hue);
+		colour.getContent().add(saturation);
+
+		grayscale.addActionListener(e ->
+		{
+			if (!updating)
+			{
+				write(grayscaleKey, Boolean.toString(grayscale.isSelected()));
+			}
+		});
+		colour.getContent().add(grayscale);
+
+		JPanel wrapper = new JPanel(new BorderLayout());
+		wrapper.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		wrapper.setBorder(BorderFactory.createEmptyBorder(6, 0, 0, 0));
+		wrapper.add(colour, BorderLayout.CENTER);
+		add(wrapper);
+	}
+
+	private void buildReset()
+	{
+		add(PanelComponents.buttonRow(PanelComponents.flatButton("Reset framing", () ->
+		{
+			presetManager.resetRegion(regionId);
+			refresh();
+		})));
+	}
+
+	/**
+	 * Every config key this editor displays, so the panel knows which changes it must redraw for.
+	 */
+	Set<String> keys()
+	{
+		return Set.of(pathKey, fitKey, zoomKey, focalXKey, focalYKey, imageOpacityKey,
+			transparencyKey, hueKey, saturationKey, grayscaleKey);
+	}
+
+	void refresh()
+	{
+		updating = true;
+		try
+		{
+			fit.setSelectedItem(readFit());
+			zoom.setValue(readInt(zoomKey, 100));
+			focalX.setValue(readInt(focalXKey, 50));
+			focalY.setValue(readInt(focalYKey, 50));
+			imageOpacity.setValue(readInt(imageOpacityKey, 100));
+			transparency.setValue(readInt(transparencyKey, 100));
+			hue.setValue(readInt(hueKey, 0));
+			saturation.setValue(readInt(saturationKey, 100));
+			grayscale.setSelected(Boolean.parseBoolean(orEmpty(read(grayscaleKey)).trim()));
+			updatePreview(read(pathKey));
+		}
+		finally
+		{
+			updating = false;
+		}
 	}
 
 	private void chooseImage()
@@ -155,6 +309,9 @@ public class RegionImagePicker extends JPanel
 		chooser.setAcceptAllFileFilterUsed(false);
 		chooser.addChoosableFileFilter(new FileNameExtensionFilter(
 			"Images (png, jpg, jpeg, gif, bmp)", "png", "jpg", "jpeg", "gif", "bmp"));
+
+		// Registers itself as a listener on the chooser, so the preview follows the selection.
+		chooser.setAccessory(new ImagePreview(chooser));
 
 		if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION)
 		{
@@ -192,12 +349,28 @@ public class RegionImagePicker extends JPanel
 	private void setImagePath(String path)
 	{
 		// The overlay re-reads this every frame, so the game updates as soon as it is set.
-		configManager.setConfiguration(CleanVisualsConfig.GROUP_NAME, configKey, path);
+		configManager.setConfiguration(CleanVisualsConfig.GROUP_NAME, pathKey, path);
+
+		// Re-importing over an existing name leaves the path identical but the pixels different,
+		// so the cache below has to be dropped rather than trusted.
+		previewedPath = null;
 		updatePreview(path);
 	}
 
 	private void updatePreview(String path)
 	{
+		String normalised = path == null ? "" : path.trim();
+
+		// Dragging any slider writes config, and every write brings the whole panel back through
+		// here. Decoding the same file off disk sixty times a second to redraw a preview that
+		// cannot have changed is the most expensive thing this panel could possibly do, so an
+		// unchanged path is answered by leaving the preview exactly as it is.
+		if (normalised.equals(previewedPath))
+		{
+			return;
+		}
+		previewedPath = normalised;
+
 		if (path == null || path.trim().isEmpty())
 		{
 			preview.setIcon(null);
@@ -219,7 +392,8 @@ public class RegionImagePicker extends JPanel
 		if (!isInsideAssetsDir(file) || !file.isFile())
 		{
 			preview.setIcon(null);
-			preview.setText("File not found");
+			preview.setText("Image missing");
+			filename.setText("Choose it again to restore");
 			return;
 		}
 
@@ -255,6 +429,60 @@ public class RegionImagePicker extends JPanel
 	static boolean isInsideAssetsDir(File file)
 	{
 		return ASSETS_DIR.equals(file.toPath().toAbsolutePath().normalize().getParent());
+	}
+
+	private String read(String key)
+	{
+		return configManager.getConfiguration(CleanVisualsConfig.GROUP_NAME, key);
+	}
+
+	private int readInt(String key, int fallback)
+	{
+		String raw = read(key);
+		if (raw == null || raw.trim().isEmpty())
+		{
+			return fallback;
+		}
+		try
+		{
+			return Integer.parseInt(raw.trim());
+		}
+		catch (NumberFormatException e)
+		{
+			return fallback;
+		}
+	}
+
+	private ImageFit readFit()
+	{
+		String raw = read(fitKey);
+		if (raw == null || raw.trim().isEmpty())
+		{
+			return ImageFit.FILL;
+		}
+		try
+		{
+			return ImageFit.valueOf(raw.trim());
+		}
+		catch (IllegalArgumentException e)
+		{
+			return ImageFit.FILL;
+		}
+	}
+
+	private void write(String key, int value)
+	{
+		write(key, Integer.toString(value));
+	}
+
+	private void write(String key, String value)
+	{
+		configManager.setConfiguration(CleanVisualsConfig.GROUP_NAME, key, value);
+	}
+
+	private static String orEmpty(String value)
+	{
+		return value == null ? "" : value;
 	}
 
 	/**

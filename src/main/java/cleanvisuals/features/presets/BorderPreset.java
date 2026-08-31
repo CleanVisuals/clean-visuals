@@ -23,63 +23,27 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package cleanvisuals.features.backgrounds;
+package cleanvisuals.features.presets;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
-import net.runelite.api.Client;
-import net.runelite.api.gameval.InterfaceID;
-import net.runelite.api.gameval.SpriteID;
-import net.runelite.api.widgets.Widget;
-import net.runelite.client.callback.ClientThread;
-import cleanvisuals.CleanVisualsConfig;
+import lombok.Data;
 
 /**
- * Background behind the chatbox.
+ * One region's custom border, as stored in a preset.
+ * <p>
+ * Style and colour are held as the raw config strings rather than as their types, the same way
+ * tints are: a preset written today still loads if a style is renamed or removed, because an
+ * unrecognised value falls back to the default rather than failing to parse the whole file.
+ * <p>
+ * Every field is boxed so that absent means absent. A preset saved before borders existed has
+ * none of these, and applying it must leave the current border alone rather than switching it
+ * off -- loading an old preset should not turn off a feature it has never heard of.
  */
-@Singleton
-public class ChatboxBackgroundOverlay extends RegionBackgroundOverlay
+@Data
+public class BorderPreset
 {
-	private final CleanVisualsConfig config;
-
-	@Inject
-	ChatboxBackgroundOverlay(Client client, ClientThread clientThread, CleanVisualsConfig config)
-	{
-		super(client, clientThread);
-		this.config = config;
-	}
-
-	@Override
-	public boolean isEnabled(CleanVisualsConfig config)
-	{
-		return config.chatboxBackground();
-	}
-
-	@Override
-	protected Widget boundsWidget()
-	{
-		return client.getWidget(InterfaceID.Chatbox.CHAT_BACKGROUND);
-	}
-
-	@Override
-	protected int obstructionSpriteId()
-	{
-		return SpriteID.CHAT_BACKGROUND;
-	}
-
-	@Override
-	protected RegionSettings settings()
-	{
-		return new RegionSettings(
-			config.chatboxImagePath(),
-			config.chatboxFit(),
-			config.chatboxZoom(),
-			config.chatboxFocalX(),
-			config.chatboxFocalY(),
-			config.chatboxHue(),
-			config.chatboxSaturation(),
-			config.chatboxGrayscale(),
-			config.chatboxImageOpacity(),
-			config.chatboxWidgetTransparency());
-	}
+	private Boolean enabled;
+	private String style;
+	private String colour;
+	private Integer thickness;
+	private Integer opacity;
 }

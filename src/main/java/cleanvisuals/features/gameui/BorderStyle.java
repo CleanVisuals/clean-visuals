@@ -23,63 +23,43 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package cleanvisuals.features.backgrounds;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
-import net.runelite.api.Client;
-import net.runelite.api.gameval.InterfaceID;
-import net.runelite.api.gameval.SpriteID;
-import net.runelite.api.widgets.Widget;
-import net.runelite.client.callback.ClientThread;
-import cleanvisuals.CleanVisualsConfig;
+package cleanvisuals.features.gameui;
 
 /**
- * Background behind the chatbox.
+ * How a custom border is drawn.
+ * <p>
+ * Every style is a handful of fills against the panel's own bounds, so adding one is a constant
+ * here and a branch in the overlay -- no images and nothing cached.
+ * <p>
+ * Thickness means the same thing throughout: the total width of the band, with each style
+ * dividing that band up its own way rather than growing beyond it.
  */
-@Singleton
-public class ChatboxBackgroundOverlay extends RegionBackgroundOverlay
+public enum BorderStyle
 {
-	private final CleanVisualsConfig config;
+	SOLID("Solid"),
 
-	@Inject
-	ChatboxBackgroundOverlay(Client client, ClientThread clientThread, CleanVisualsConfig config)
+	DOUBLE("Double line"),
+
+	INSET("Inset (sunken)"),
+
+	OUTSET("Outset (raised)"),
+
+	ROUNDED("Rounded"),
+
+	GLOW("Soft glow"),
+
+	CORNERS("Corners only");
+
+	private final String label;
+
+	BorderStyle(String label)
 	{
-		super(client, clientThread);
-		this.config = config;
+		this.label = label;
 	}
 
 	@Override
-	public boolean isEnabled(CleanVisualsConfig config)
+	public String toString()
 	{
-		return config.chatboxBackground();
-	}
-
-	@Override
-	protected Widget boundsWidget()
-	{
-		return client.getWidget(InterfaceID.Chatbox.CHAT_BACKGROUND);
-	}
-
-	@Override
-	protected int obstructionSpriteId()
-	{
-		return SpriteID.CHAT_BACKGROUND;
-	}
-
-	@Override
-	protected RegionSettings settings()
-	{
-		return new RegionSettings(
-			config.chatboxImagePath(),
-			config.chatboxFit(),
-			config.chatboxZoom(),
-			config.chatboxFocalX(),
-			config.chatboxFocalY(),
-			config.chatboxHue(),
-			config.chatboxSaturation(),
-			config.chatboxGrayscale(),
-			config.chatboxImageOpacity(),
-			config.chatboxWidgetTransparency());
+		return label;
 	}
 }

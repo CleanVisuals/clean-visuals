@@ -111,6 +111,11 @@ public class GameUiOpacity implements PluginLifecycleComponent
 				}
 
 				originals.putIfAbsent(componentId, widget.getOpacity());
+
+				// The unread-message flash is not special-cased here. It keeps its colour, which
+				// is what makes it legible against a black and white frame, but it fades with
+				// everything else: a tab that snapped to solid while the frame around it stayed
+				// see-through drew the eye by breaking the look rather than by being clear.
 				if (widget.getOpacity() != target)
 				{
 					widget.setOpacity(target);

@@ -28,6 +28,8 @@ package cleanvisuals.features.presets;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.InputStream;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
@@ -65,6 +67,12 @@ public class PresetManager
 {
 	private static final Path PRESETS_DIR = Path.of(RuneLite.RUNELITE_DIR.getPath(), "clean-visuals", "presets");
 	private static final String SUFFIX = ".json";
+
+	/**
+	 * The starting look, bundled in the jar rather than written to disk: a file on disk could be
+	 * edited or deleted, and this has to mean the same thing on every installation.
+	 */
+	private static final String DEFAULTS_RESOURCE = "/default-preset.json";
 
 	/**
 	 * Config keys for one region. Regions store identical settings under different prefixes,
@@ -238,6 +246,7 @@ public class PresetManager
 		Preset preset = new Preset(name);
 		REGION_KEYS.forEach((region, keys) -> preset.getRegions().put(region, capture(keys)));
 		preset.setGameUi(captureGameUi());
+		BORDER_PREFIXES.forEach((region, prefix) -> preset.getBorders().put(region, captureBorder(prefix)));
 
 		Files.createDirectories(PRESETS_DIR);
 		try (Writer writer = Files.newBufferedWriter(pathFor(name), StandardCharsets.UTF_8))
@@ -257,10 +266,114 @@ public class PresetManager
 			throw new IOException("Preset not found: " + name);
 		}
 
+		applyPreset(preset);
+	}
+
+	/**
+	 * The look a brand new installation starts with, shipped in the jar.
+	 * <p>
+	 * Applied only to an installation that has never been configured -- see {@code FirstRunSetup}.
+	 * It carries no image paths: a path from the machine this was authored on would mean nothing
+	 * anywhere else, and the regions are switched off on a fresh install anyway. What it does
+	 * carry is the framing each region should use once an image is chosen, so the first picture
+	 * someone picks already sits the way it is meant to.
+	 */
+	public void applyBundledDefaults() throws IOException
+	{
+		// getResourceAsStream rather than getResource: on the hub this jar is never unpacked, so
+		// a file path into it does not resolve.
+		try (InputStream in = PresetManager.class.getResourceAsStream(DEFAULTS_RESOURCE))
+		{
+			if (in == null)
+			{
+				throw new IOException("Bundled defaults missing: " + DEFAULTS_RESOURCE);
+			}
+
+			try (Reader reader = new InputStreamReader(in, StandardCharsets.UTF_8))
+			{
+				Preset preset = gson.fromJson(reader, Preset.class);
+				if (preset == null)
+				{
+					throw new IOException("Bundled defaults are empty");
+				}
+				applyPreset(preset);
+			}
+		}
+		catch (JsonSyntaxException e)
+		{
+			throw new IOException("Bundled defaults are not valid JSON", e);
+		}
+	}
+
+	private void applyPreset(Preset preset)
+	{
 		// preset.region() defaults any region the preset predates, so older presets load
 		// cleanly and simply leave newer regions at their defaults.
 		REGION_KEYS.forEach((region, keys) -> applyStyle(preset.region(region), keys));
 		applyGameUi(preset.gameUi());
+		BORDER_PREFIXES.forEach((region, prefix) -> applyBorder(preset, region, prefix));
+	}
+
+	/**
+	 * Config key prefix per region for the custom borders. The enable key is the prefix itself,
+	 * and the rest hang off it.
+	 */
+	private static final Map<String, String> BORDER_PREFIXES = Map.of(
+		Preset.REGION_INVENTORY, "sidePanelBorder",
+		Preset.REGION_CHATBOX, "chatboxBorder");
+
+	private BorderPreset captureBorder(String prefix)
+	{
+		BorderPreset border = new BorderPreset();
+		border.setEnabled(getBoolean(prefix));
+		border.setStyle(orEmpty(get(prefix + "Style")).trim());
+		border.setColour(orEmpty(get(prefix + "Colour")).trim());
+		border.setThickness(getInt(prefix + "Thickness", 3));
+		border.setOpacity(getInt(prefix + "Opacity", 100));
+		return border;
+	}
+
+	/**
+	 * Writes a border back, field by field, skipping anything the preset does not carry.
+	 * <p>
+	 * A preset written before borders existed has no entry at all, and one written by a future
+	 * version might carry only some fields. Either way the missing ones are left as they are
+	 * rather than being stamped with defaults.
+	 */
+	private void applyBorder(Preset preset, String regionId, String prefix)
+	{
+		Map<String, BorderPreset> borders = preset.getBorders();
+		if (borders == null)
+		{
+			return;
+		}
+
+		BorderPreset border = borders.get(regionId);
+		if (border == null)
+		{
+			return;
+		}
+
+		if (border.getEnabled() != null)
+		{
+			set(prefix, Boolean.toString(border.getEnabled()));
+		}
+		if (border.getStyle() != null && !border.getStyle().isEmpty())
+		{
+			set(prefix + "Style", border.getStyle());
+		}
+		if (border.getColour() != null && !border.getColour().isEmpty())
+		{
+			set(prefix + "Colour", border.getColour());
+		}
+		if (border.getThickness() != null)
+		{
+			set(prefix + "Thickness", Integer.toString(border.getThickness()));
+		}
+		if (border.getOpacity() != null)
+		{
+			set(prefix + "Opacity", Integer.toString(border.getOpacity()));
+		}
 	}
 
 	/**
@@ -367,6 +480,11 @@ public class PresetManager
 		style.setOpacityPercent(getInt("gameUiOpacity", 0));
 		style.setHideSidePanelBorder(getBoolean("hideSidePanelBorder"));
 
+		style.setReportColourEnabled(getBoolean("chatReportColourEnabled"));
+		style.setReportColour(orEmpty(get("chatReportColour")).trim());
+		style.setNotifyColourEnabled(getBoolean("chatNotifyColourEnabled"));
+		style.setNotifyColour(orEmpty(get("chatNotifyColour")).trim());
+
 		GAME_UI_GROUP_KEYS.forEach((group, key) -> style.getGroups().put(group, getBoolean(key)));
 		GAME_UI_HIDE_KEYS.forEach((group, key) -> style.getHidden().put(group, getBoolean(key)));
 		GAME_UI_TINT_KEYS.forEach((group, key) ->
@@ -391,6 +509,25 @@ public class PresetManager
 		set("gameUiOpacityEnabled", Boolean.toString(style.isOpacityEnabled()));
 		set("gameUiOpacity", Integer.toString(style.getOpacityPercent()));
 		set("hideSidePanelBorder", Boolean.toString(style.isHideSidePanelBorder()));
+
+		// Null on every preset written before the chat tab exceptions existed, so skipped rather
+		// than switched off -- the same rule the tints follow.
+		if (style.getReportColourEnabled() != null)
+		{
+			set("chatReportColourEnabled", Boolean.toString(style.getReportColourEnabled()));
+		}
+		if (style.getReportColour() != null && !style.getReportColour().isEmpty())
+		{
+			set("chatReportColour", style.getReportColour());
+		}
+		if (style.getNotifyColourEnabled() != null)
+		{
+			set("chatNotifyColourEnabled", Boolean.toString(style.getNotifyColourEnabled()));
+		}
+		if (style.getNotifyColour() != null && !style.getNotifyColour().isEmpty())
+		{
+			set("chatNotifyColour", style.getNotifyColour());
+		}
 
 		GAME_UI_GROUP_KEYS.forEach((group, key) ->
 		{

@@ -36,6 +36,9 @@ import cleanvisuals.features.backgrounds.InventoryBackgroundOverlay;
 import cleanvisuals.features.backgrounds.LoginScreenBackground;
 import cleanvisuals.features.gameui.GameUiOpacity;
 import cleanvisuals.features.gameui.GameUiRecolour;
+import cleanvisuals.features.presets.FirstRunSetup;
+import cleanvisuals.features.gameui.ChatboxBorder;
+import cleanvisuals.features.gameui.SidePanelBorder;
 import cleanvisuals.features.gameui.SidePanelBorderHide;
 import java.util.Set;
 import net.runelite.client.config.ConfigManager;
@@ -60,7 +63,10 @@ public class CleanVisualsModule extends AbstractModule
 		BackgroundsPanelModule backgroundsPanelModule,
 		GameUiRecolour gameUiRecolour,
 		GameUiOpacity gameUiOpacity,
-		SidePanelBorderHide sidePanelBorderHide
+		SidePanelBorderHide sidePanelBorderHide,
+		SidePanelBorder sidePanelBorder,
+		ChatboxBorder chatboxBorder,
+		FirstRunSetup firstRunSetup
 	)
 	{
 		return ImmutableSet.<PluginLifecycleComponent>builder()
@@ -71,6 +77,9 @@ public class CleanVisualsModule extends AbstractModule
 			.add(gameUiRecolour)
 			.add(gameUiOpacity)
 			.add(sidePanelBorderHide)
+			.add(sidePanelBorder)
+			.add(chatboxBorder)
+			.add(firstRunSetup)
 			.build();
 	}
 

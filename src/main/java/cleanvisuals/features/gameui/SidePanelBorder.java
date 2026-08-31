@@ -23,63 +23,53 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package cleanvisuals.features.backgrounds;
+package cleanvisuals.features.gameui;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.api.Client;
-import net.runelite.api.gameval.InterfaceID;
-import net.runelite.api.gameval.SpriteID;
 import net.runelite.api.widgets.Widget;
-import net.runelite.client.callback.ClientThread;
 import cleanvisuals.CleanVisualsConfig;
 
 /**
- * Background behind the chatbox.
+ * A custom border around the side panel.
+ * <p>
+ * Pairs with {@link SidePanelBorderHide}: that removes the game's own border, this draws one in
+ * its place. They are independent settings because either is useful alone -- a border removed and
+ * nothing put back is the clean look, and a custom border over the top of the original is a way
+ * to have one without the global side effects of hiding it.
  */
 @Singleton
-public class ChatboxBackgroundOverlay extends RegionBackgroundOverlay
+public class SidePanelBorder extends RegionBorderOverlay
 {
 	private final CleanVisualsConfig config;
 
 	@Inject
-	ChatboxBackgroundOverlay(Client client, ClientThread clientThread, CleanVisualsConfig config)
+	SidePanelBorder(Client client, CleanVisualsConfig config)
 	{
-		super(client, clientThread);
+		super(client);
 		this.config = config;
 	}
 
 	@Override
 	public boolean isEnabled(CleanVisualsConfig config)
 	{
-		return config.chatboxBackground();
+		return config.sidePanelBorder();
 	}
 
 	@Override
 	protected Widget boundsWidget()
 	{
-		return client.getWidget(InterfaceID.Chatbox.CHAT_BACKGROUND);
+		return SidePanelWidgets.visible(client);
 	}
 
 	@Override
-	protected int obstructionSpriteId()
+	protected BorderSettings settings()
 	{
-		return SpriteID.CHAT_BACKGROUND;
-	}
-
-	@Override
-	protected RegionSettings settings()
-	{
-		return new RegionSettings(
-			config.chatboxImagePath(),
-			config.chatboxFit(),
-			config.chatboxZoom(),
-			config.chatboxFocalX(),
-			config.chatboxFocalY(),
-			config.chatboxHue(),
-			config.chatboxSaturation(),
-			config.chatboxGrayscale(),
-			config.chatboxImageOpacity(),
-			config.chatboxWidgetTransparency());
+		return new BorderSettings(
+			config.sidePanelBorderStyle(),
+			config.sidePanelBorderColour(),
+			config.sidePanelBorderThickness(),
+			config.sidePanelBorderOpacity());
 	}
 }

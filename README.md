@@ -2,8 +2,22 @@
 
 Custom backgrounds and interface theming for RuneLite.
 
-Put an image or animated GIF behind the chatbox, the side panel and the login screen, and recolour
-or hide the surrounding game frame.
+Put an image or animated GIF behind the chatbox, the side panel and the login screen, recolour or
+hide the surrounding game frame, and draw your own borders.
+
+**[Join the Discord](https://discord.gg/NaQqKakYY)** — get help, report bugs.
+
+---
+
+## Using it
+
+Backgrounds live in the **sidebar panel**: open a region, tick it on, choose an image, then frame
+it with the controls underneath. Every control can be dragged for a rough value or typed into for
+an exact one, and the game updates as you go.
+
+Frame colour, hiding and borders live in the **config screen**.
+
+Save a preset before experimenting — it stores everything, so you can always get back.
 
 ---
 
@@ -26,7 +40,8 @@ also the trade and bank backdrop; button backgrounds appear in every interface w
 **Hiding or recolouring one removes or recolours it everywhere it is drawn.**
 
 This is inherent to the mechanism, not something the plugin can scope. Enable one option at a
-time and check the bank before committing to a look.
+time and check the bank before committing to a look. Custom borders are the exception — they are
+drawn per region and affect nothing else.
 
 ### How long a GIF can be
 
@@ -86,10 +101,19 @@ Three regions, configured independently: **chatbox**, **side panel**, **login sc
 - **Hide** frame parts: minimap surround, side panel frame and backing, chat bar, chat tabs, orb
   surrounds, scrollbars, button backgrounds
 - Side panel border removal
+- Keep the **report button** and the **new-message flash** in colour, so notifications stay
+  noticeable under black & white or heavy tinting
+
+### Borders
+
+Draw your own border around the chatbox or the side panel — solid, double line, inset, outset,
+rounded, soft glow or corners only, with your own colour, thickness and opacity. Scoped to the one
+region, unlike removing the game's own border.
 
 ### Presets
 
-Save and load complete looks — all three regions plus every Game UI setting — as named files.
+Save and load complete looks — all three regions, every Game UI setting and the borders — as named
+files.
 
 ---
 
@@ -112,7 +136,8 @@ A personal project, published because RuneLite's launcher will not load a plugin
 Provided as-is: issues and feature requests may not be actioned, and it is shaped around how one
 person uses the game.
 
-Bug reports are still welcome, particularly anything that breaks after a RuneLite update.
+Bug reports are still welcome, particularly anything that breaks after a RuneLite update — either
+in [issues](../../issues) or on the [Discord](https://discord.gg/NaQqKakYY).
 
 ---
 

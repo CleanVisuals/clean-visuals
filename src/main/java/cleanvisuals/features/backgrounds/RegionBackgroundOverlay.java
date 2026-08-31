@@ -25,7 +25,6 @@
 
 package cleanvisuals.features.backgrounds;
 
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
@@ -35,7 +34,6 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.SpritePixels;
-import net.runelite.api.gameval.VarbitID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.client.callback.ClientThread;
 import cleanvisuals.module.PluginLifecycleComponent;
@@ -48,7 +46,7 @@ import net.runelite.client.util.ImageUtil;
  * Draws a framed image behind an in-game region.
  * <p>
  * Everything region-independent lives here: the two render strategies, sprite management,
- * animation timing and diagnostics. A subclass supplies only <i>which</i> widget bounds the
+ * animation timing. A subclass supplies only <i>which</i> widget bounds the
  * image fills, <i>which</i> sprite would otherwise obstruct it, and its settings.
  *
  * <h2>Why there are two render strategies</h2>
@@ -135,13 +133,6 @@ public abstract class RegionBackgroundOverlay extends Overlay implements PluginL
 
 	protected abstract RegionSettings settings();
 
-	protected abstract boolean diagnosticsEnabled();
-
-	/**
-	 * Human-readable region name, used only in diagnostics.
-	 */
-	protected abstract String regionName();
-
 	@Override
 	public void startUp()
 	{
@@ -202,11 +193,6 @@ public abstract class RegionBackgroundOverlay extends Overlay implements PluginL
 		int frame = background.frameAt(System.currentTimeMillis() - startedAtMs);
 		background.draw(graphics, bounds, settings.transform(), settings.adjustments(),
 			settings.alpha(), frame);
-
-		if (diagnosticsEnabled())
-		{
-			drawDiagnostics(graphics, bounds);
-		}
 
 		return null;
 	}
@@ -276,29 +262,5 @@ public abstract class RegionBackgroundOverlay extends Overlay implements PluginL
 			}
 		}
 		originalOpacities.clear();
-	}
-
-	private void drawDiagnostics(Graphics2D graphics, Rectangle bounds)
-	{
-		// Both resizable arrangements are still reported. They are not different strategies, but
-		// they do resolve through different top level interfaces, and knowing which one is live
-		// has mattered every time something failed to resolve.
-		String mode = client.getVarbitValue(VarbitID.RESIZABLE_STONE_ARRANGEMENT) == 1
-			? "RESIZABLE_MODERN"
-			: "RESIZABLE_CLASSIC";
-
-		String animation = background.isAnimated()
-			? background.frameCount() + "f animated"
-			: "still";
-
-		String text = String.format("%s | %s | %dx%d | %s",
-			regionName(), mode, bounds.width, bounds.height, animation);
-
-		int x = bounds.x + 4;
-		int y = bounds.y + 14;
-		graphics.setColor(Color.BLACK);
-		graphics.drawString(text, x + 1, y + 1);
-		graphics.setColor(Color.YELLOW);
-		graphics.drawString(text, x, y);
 	}
 }

@@ -57,6 +57,13 @@ public class Preset
 	 */
 	private GameUiStyle gameUi;
 
+	/**
+	 * Custom borders, keyed by the same region ids as {@link #regions}. Absent on presets written
+	 * before borders existed, which is why applying one skips any region it has no entry for --
+	 * loading an old preset should not switch off a feature it has never heard of.
+	 */
+	private Map<String, BorderPreset> borders = new LinkedHashMap<>();
+
 	public Preset(String name)
 	{
 		this.name = name;

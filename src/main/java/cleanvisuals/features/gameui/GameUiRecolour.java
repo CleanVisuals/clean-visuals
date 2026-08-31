@@ -40,6 +40,7 @@ import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.SpritePixels;
+import net.runelite.api.gameval.SpriteID;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
@@ -112,8 +113,13 @@ public class GameUiRecolour implements PluginLifecycleComponent
 	public boolean isEnabled(CleanVisualsConfig config)
 	{
 		// Hiding is independent of colour: ticking "hide minimap surround" should work without
-		// also having to enable a colour treatment that is not wanted.
-		return config.gameUiRecolour() || anyGroupHidden();
+		// also having to enable a colour treatment that is not wanted. The chat tab exceptions are
+		// independent of both -- a red report button on an otherwise untouched frame is a perfectly
+		// reasonable thing to want, and it is this component that paints it.
+		return config.gameUiRecolour()
+			|| anyGroupHidden()
+			|| config.chatReportColourEnabled()
+			|| config.chatNotifyColourEnabled();
 	}
 
 	@Override
@@ -215,7 +221,9 @@ public class GameUiRecolour implements PluginLifecycleComponent
 			}
 		}
 
-		String key = hidden + "|" + plan;
+		Map<Integer, ImageAdjustments> exceptions = exceptions();
+
+		String key = hidden + "|" + plan + "|" + exceptions;
 		if (key.equals(appliedKey))
 		{
 			return;
@@ -224,7 +232,7 @@ public class GameUiRecolour implements PluginLifecycleComponent
 
 		restore();
 
-		if (plan.isEmpty() && hidden.isEmpty())
+		if (plan.isEmpty() && hidden.isEmpty() && exceptions.isEmpty())
 		{
 			return;
 		}
@@ -255,6 +263,12 @@ public class GameUiRecolour implements PluginLifecycleComponent
 		{
 			for (int spriteId : entry.getKey().spriteIds())
 			{
+				if (exceptions.containsKey(spriteId))
+				{
+					// Takes its own treatment below instead of the group's.
+					continue;
+				}
+
 				BufferedImage original = original(spriteId);
 				if (original == null)
 				{
@@ -271,7 +285,62 @@ public class GameUiRecolour implements PluginLifecycleComponent
 			}
 		}
 
+		// Last, so an exception wins even where its group was hidden -- an unread-message flash
+		// you asked to keep should still arrive when the tabs themselves are blanked.
+		for (Map.Entry<Integer, ImageAdjustments> entry : exceptions.entrySet())
+		{
+			int spriteId = entry.getKey();
+
+			BufferedImage original = original(spriteId);
+			if (original == null)
+			{
+				continue;
+			}
+
+			BufferedImage recoloured = copy(original);
+			entry.getValue().applyTo(recoloured);
+
+			client.getSpriteOverrides().put(spriteId, ImageUtil.getImageSpritePixels(recoloured, client));
+			applied.add(spriteId);
+		}
+
 		resetCache();
+	}
+
+	/**
+	 * Sprites that opt out of their group's treatment and take their own.
+	 * <p>
+	 * Both of these carry meaning rather than decoration, and the colour treatment destroys that
+	 * meaning: greyscale turns the unread-message flash into a shade of the tab it is trying to
+	 * stand out from, and a tint does the same to the report button. The rest of the frame can be
+	 * black and white without these two having to be.
+	 */
+	private Map<Integer, ImageAdjustments> exceptions()
+	{
+		Map<Integer, ImageAdjustments> exceptions = new LinkedHashMap<>();
+
+		if (config.chatReportColourEnabled())
+		{
+			ImageAdjustments tint = tintOnly(config.chatReportColour());
+			exceptions.put(SpriteID.ReportButton.BUTTON, tint);
+			exceptions.put(SpriteID.ReportButton.HOVERED, tint);
+		}
+
+		if (config.chatNotifyColourEnabled())
+		{
+			exceptions.put(SpriteID.ChatTabButton.NEW_MESSAGES, tintOnly(config.chatNotifyColour()));
+		}
+
+		return exceptions;
+	}
+
+	/**
+	 * The chosen colour at full strength and nothing else -- no hue shift, no desaturation, no
+	 * greyscale -- so the sprite reads as that colour whatever the global controls are set to.
+	 */
+	private static ImageAdjustments tintOnly(Color colour)
+	{
+		return new ImageAdjustments(0, 100, false, colour, 100);
 	}
 
 	/**

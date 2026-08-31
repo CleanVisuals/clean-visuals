@@ -74,4 +74,17 @@ public class GameUiStyle
 	 * rather than needing a migration, and a missing entry means "leave that toggle alone".
 	 */
 	private Map<String, Boolean> hidden = new LinkedHashMap<>();
+
+	/**
+	 * The chat tab colour exceptions -- the report button and the unread-message flash keeping
+	 * their own colour through a black and white frame.
+	 * <p>
+	 * Boxed rather than primitive, unlike the fields above, because these were added after presets
+	 * already existed in the wild. A primitive would read as {@code false} on every older preset
+	 * and switch the exceptions off on load; null lets applying skip them instead.
+	 */
+	private Boolean reportColourEnabled;
+	private String reportColour;
+	private Boolean notifyColourEnabled;
+	private String notifyColour;
 }

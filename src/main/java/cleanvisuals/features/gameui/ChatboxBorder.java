@@ -23,36 +23,37 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package cleanvisuals.features.backgrounds;
+package cleanvisuals.features.gameui;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.api.Client;
 import net.runelite.api.gameval.InterfaceID;
-import net.runelite.api.gameval.SpriteID;
 import net.runelite.api.widgets.Widget;
-import net.runelite.client.callback.ClientThread;
 import cleanvisuals.CleanVisualsConfig;
 
 /**
- * Background behind the chatbox.
+ * A custom border around the chatbox.
+ * <p>
+ * Framed on the same widget the chatbox background is drawn into, so the border and the image
+ * behind it agree on where the chatbox is, whatever the layout does with it.
  */
 @Singleton
-public class ChatboxBackgroundOverlay extends RegionBackgroundOverlay
+public class ChatboxBorder extends RegionBorderOverlay
 {
 	private final CleanVisualsConfig config;
 
 	@Inject
-	ChatboxBackgroundOverlay(Client client, ClientThread clientThread, CleanVisualsConfig config)
+	ChatboxBorder(Client client, CleanVisualsConfig config)
 	{
-		super(client, clientThread);
+		super(client);
 		this.config = config;
 	}
 
 	@Override
 	public boolean isEnabled(CleanVisualsConfig config)
 	{
-		return config.chatboxBackground();
+		return config.chatboxBorder();
 	}
 
 	@Override
@@ -62,24 +63,12 @@ public class ChatboxBackgroundOverlay extends RegionBackgroundOverlay
 	}
 
 	@Override
-	protected int obstructionSpriteId()
+	protected BorderSettings settings()
 	{
-		return SpriteID.CHAT_BACKGROUND;
-	}
-
-	@Override
-	protected RegionSettings settings()
-	{
-		return new RegionSettings(
-			config.chatboxImagePath(),
-			config.chatboxFit(),
-			config.chatboxZoom(),
-			config.chatboxFocalX(),
-			config.chatboxFocalY(),
-			config.chatboxHue(),
-			config.chatboxSaturation(),
-			config.chatboxGrayscale(),
-			config.chatboxImageOpacity(),
-			config.chatboxWidgetTransparency());
+		return new BorderSettings(
+			config.chatboxBorderStyle(),
+			config.chatboxBorderColour(),
+			config.chatboxBorderThickness(),
+			config.chatboxBorderOpacity());
 	}
 }

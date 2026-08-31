@@ -35,6 +35,7 @@ import net.runelite.api.gameval.VarbitID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.client.callback.ClientThread;
 import cleanvisuals.CleanVisualsConfig;
+import cleanvisuals.features.gameui.SidePanelWidgets;
 
 /**
  * Background behind the inventory.
@@ -176,20 +177,10 @@ public class InventoryBackgroundOverlay extends RegionBackgroundOverlay
 	 */
 	private Widget[] sidePanelWidgets()
 	{
-		// Only the content panel. SIDE_STATIC_BACKGROUND and SIDE_MOVABLE_BACKGROUND are
-		// deliberately excluded: measurement showed they are the two 36px tab icon strips
-		// ([660,546 231x36] and [660,510 231x36] in modern), not panel backing. Including them
-		// meant their opacity was set to fully transparent, which is what removed the stone
-		// from behind the tab icons.
-		//
-		// Both layouts are listed because the interface in use is the opposite of what the
-		// names suggest: modern runs 164 (ToplevelPreEoc), classic runs 161
-		// (ToplevelOsrsStretch). Whichever is not in use reports hidden, so taking the first
-		// visible candidate resolves correctly without relying on that mapping.
-		return new Widget[]{
-			client.getWidget(InterfaceID.ToplevelOsrsStretch.SIDE_BACKGROUND),
-			client.getWidget(InterfaceID.ToplevelPreEoc.SIDE_BACKGROUND)
-		};
+		// Which interface the panel lives on, and which widgets are backing rather than tab
+		// strips, is documented on SidePanelWidgets -- the custom border needs the same answer,
+		// and that is not knowledge worth holding in two places.
+		return SidePanelWidgets.candidates(client);
 	}
 
 	@Override
@@ -232,18 +223,6 @@ public class InventoryBackgroundOverlay extends RegionBackgroundOverlay
 	protected Widget[] backingWidgets()
 	{
 		return sidePanelWidgets();
-	}
-
-	@Override
-	protected String regionName()
-	{
-		return "side panel";
-	}
-
-	@Override
-	protected boolean diagnosticsEnabled()
-	{
-		return config.showDiagnostics();
 	}
 
 	@Override

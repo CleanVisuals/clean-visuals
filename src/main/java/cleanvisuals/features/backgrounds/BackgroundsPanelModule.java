@@ -40,7 +40,11 @@ import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.util.ImageUtil;
 
 /**
- * Adds the backgrounds panel to the sidebar while the feature is switched on.
+ * Adds the backgrounds panel to the sidebar for as long as the plugin runs.
+ * <p>
+ * Always present rather than appearing once a background is switched on: the enable ticks
+ * live in the panel itself, so gating the panel on them would leave a new user with no way to
+ * reach either.
  */
 @Singleton
 @Slf4j
@@ -54,12 +58,6 @@ public class BackgroundsPanelModule implements PluginLifecycleComponent
 
 	private BackgroundsPanel panel;
 	private NavigationButton navigationButton;
-
-	@Override
-	public boolean isEnabled(CleanVisualsConfig config)
-	{
-		return config.chatboxBackground() || config.invBackground() || config.loginBackground();
-	}
 
 	@Override
 	public void startUp()

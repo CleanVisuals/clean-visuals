@@ -8,6 +8,7 @@ import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigSection;
 import net.runelite.client.config.Range;
 import cleanvisuals.features.backgrounds.ImageFit;
+import cleanvisuals.features.gameui.BorderStyle;
 
 @ConfigGroup(CleanVisualsConfig.GROUP_NAME)
 public interface CleanVisualsConfig extends Config
@@ -23,19 +24,47 @@ public interface CleanVisualsConfig extends Config
 	 */
 	Color NO_TINT = new Color(0, 0, 0, 0);
 
-	@ConfigSection(name = "Chatbox background",
-		description = "Image behind the chatbox",
-		position = 10,
+	@ConfigSection(name = "Game UI colour",
+		description = "Recolours the game frame",
+		position = 12,
 		closedByDefault = true
 	)
-	String chatboxSection = "chatboxSection";
+	String gameUiSection = "gameUiSection";
+
+	@ConfigSection(name = "Hide UI parts",
+		description = "Removes interface decoration entirely. Affects every interface sharing those sprites",
+		position = 13,
+		closedByDefault = true
+	)
+	String hideSection = "hideSection";
+
+	@ConfigSection(name = "Side panel border",
+		description = "Draws a border of your own around the side panel",
+		position = 14,
+		closedByDefault = true
+	)
+	String borderSection = "borderSection";
+
+	@ConfigSection(name = "Chatbox border",
+		description = "Draws a border of your own around the chatbox",
+		position = 15,
+		closedByDefault = true
+	)
+	String chatboxBorderSection = "chatboxBorderSection";
+
+	@ConfigSection(name = "Chat tabs",
+		description = "Exceptions to the colour treatment, for the parts of the chat tabs that carry meaning",
+		position = 16,
+		closedByDefault = true
+	)
+	String chatTabsSection = "chatTabsSection";
 
 	@ConfigItem(
 		keyName = "chatboxBackground",
 		name = "Enable chatbox background",
 		description = "Draws an image behind the chatbox and makes the chatbox background see-through",
 		position = 1,
-		section = chatboxSection
+		hidden = true
 	)
 	default boolean chatboxBackground()
 	{
@@ -47,7 +76,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Image file",
 		description = "Full path to an image. Leave empty for a magenta/cyan test pattern",
 		position = 2,
-		section = chatboxSection
+		hidden = true
 	)
 	default String chatboxImagePath()
 	{
@@ -59,7 +88,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Fit",
 		description = "How the image is sized against the region before zoom and position",
 		position = 3,
-		section = chatboxSection
+		hidden = true
 	)
 	default ImageFit chatboxFit()
 	{
@@ -72,7 +101,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Zoom %",
 		description = "Zoom relative to the fitted size. 100 = as Fit produced it",
 		position = 4,
-		section = chatboxSection
+		hidden = true
 	)
 	default int chatboxZoom()
 	{
@@ -85,7 +114,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Position X %",
 		description = "Which point of the image sits at the centre. 0 = left edge, 100 = right edge",
 		position = 5,
-		section = chatboxSection
+		hidden = true
 	)
 	default int chatboxFocalX()
 	{
@@ -98,7 +127,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Position Y %",
 		description = "Which point of the image sits at the centre. 0 = top edge, 100 = bottom edge",
 		position = 6,
-		section = chatboxSection
+		hidden = true
 	)
 	default int chatboxFocalY()
 	{
@@ -111,7 +140,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Image opacity",
 		description = "How strongly the background image is drawn (100 = fully visible)",
 		position = 7,
-		section = chatboxSection
+		hidden = true
 	)
 	default int chatboxImageOpacity()
 	{
@@ -124,7 +153,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Chatbox see-through",
 		description = "How see-through the chatbox background becomes (0 = unchanged, 100 = fully see-through)",
 		position = 8,
-		section = chatboxSection
+		hidden = true
 	)
 	default int chatboxWidgetTransparency()
 	{
@@ -135,7 +164,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Hue shift",
 		description = "Rotates colours around the colour wheel, in degrees. 0 = unchanged",
 		position = 9,
-		section = chatboxSection
+		hidden = true
 	)
 	@Range(min = -180, max = 180)
 	default int chatboxHue()
@@ -149,7 +178,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Saturation %",
 		description = "0 = grey, 100 = unchanged, 200 = double intensity",
 		position = 10,
-		section = chatboxSection
+		hidden = true
 	)
 	default int chatboxSaturation()
 	{
@@ -161,26 +190,20 @@ public interface CleanVisualsConfig extends Config
 		name = "Black & white",
 		description = "Converts the image to greyscale. Overrides hue and saturation",
 		position = 11,
-		section = chatboxSection
+		hidden = true
 	)
 	default boolean chatboxGrayscale()
 	{
 		return false;
 	}
 
-	@ConfigSection(name = "Side panel background",
-		description = "Image behind the inventory, prayer, magic and other side tabs",
-		position = 11,
-		closedByDefault = true
-	)
-	String inventorySection = "inventorySection";
 
 	@ConfigItem(
 		keyName = "invBackground",
 		name = "Enable side panel background",
 		description = "Draws an image behind the side panel, visible on every tab",
 		position = 1,
-		section = inventorySection
+		hidden = true
 	)
 	default boolean invBackground()
 	{
@@ -192,7 +215,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Image file",
 		description = "Full path to an image. Leave empty for a test pattern",
 		position = 2,
-		section = inventorySection
+		hidden = true
 	)
 	default String invImagePath()
 	{
@@ -204,7 +227,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Fit",
 		description = "How the image is sized against the region before zoom and position",
 		position = 3,
-		section = inventorySection
+		hidden = true
 	)
 	default ImageFit invFit()
 	{
@@ -217,7 +240,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Zoom %",
 		description = "Zoom relative to the fitted size",
 		position = 4,
-		section = inventorySection
+		hidden = true
 	)
 	default int invZoom()
 	{
@@ -230,7 +253,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Position X %",
 		description = "Which point of the image sits at the centre. 0 = left, 100 = right",
 		position = 5,
-		section = inventorySection
+		hidden = true
 	)
 	default int invFocalX()
 	{
@@ -243,7 +266,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Position Y %",
 		description = "Which point of the image sits at the centre. 0 = top, 100 = bottom",
 		position = 6,
-		section = inventorySection
+		hidden = true
 	)
 	default int invFocalY()
 	{
@@ -256,7 +279,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Image opacity",
 		description = "How strongly the image is drawn",
 		position = 7,
-		section = inventorySection
+		hidden = true
 	)
 	default int invImageOpacity()
 	{
@@ -269,7 +292,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Side panel see-through",
 		description = "How see-through the side panel backing becomes",
 		position = 8,
-		section = inventorySection
+		hidden = true
 	)
 	default int invWidgetTransparency()
 	{
@@ -282,7 +305,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Hue shift",
 		description = "Rotates colours around the colour wheel, in degrees",
 		position = 10,
-		section = inventorySection
+		hidden = true
 	)
 	default int invHue()
 	{
@@ -295,7 +318,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Saturation %",
 		description = "0 = grey, 100 = unchanged, 200 = double intensity",
 		position = 11,
-		section = inventorySection
+		hidden = true
 	)
 	default int invSaturation()
 	{
@@ -307,7 +330,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Black & white",
 		description = "Converts the image to greyscale. Overrides hue and saturation",
 		position = 12,
-		section = inventorySection
+		hidden = true
 	)
 	default boolean invGrayscale()
 	{
@@ -316,30 +339,24 @@ public interface CleanVisualsConfig extends Config
 
 	@ConfigItem(
 		keyName = "hideSidePanelBorder",
-		name = "Hide side panel border",
+		name = "Side panel border",
 		description = "Removes the border around the side panel in modern layout. Stone style only -- steel leaves a "
 			+ "divider that cannot be identified. These sprites are shared with other interfaces, so their borders go too",
-		position = 13,
-		section = inventorySection
+		position = 4,
+		section = hideSection
 	)
 	default boolean hideSidePanelBorder()
 	{
 		return false;
 	}
 
-	@ConfigSection(name = "Login screen background",
-		description = "Image behind the login screen",
-		position = 11,
-		closedByDefault = true
-	)
-	String loginSection = "loginSection";
 
 	@ConfigItem(
 		keyName = "loginBackground",
 		name = "Enable login screen background",
 		description = "Replaces the login screen background with your own image",
 		position = 1,
-		section = loginSection
+		hidden = true
 	)
 	default boolean loginBackground()
 	{
@@ -351,7 +368,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Image file",
 		description = "Full path to an image. Leave empty for a test pattern",
 		position = 2,
-		section = loginSection
+		hidden = true
 	)
 	default String loginImagePath()
 	{
@@ -363,7 +380,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Fit",
 		description = "How the image is sized against the login screen before zoom and position",
 		position = 3,
-		section = loginSection
+		hidden = true
 	)
 	default ImageFit loginFit()
 	{
@@ -376,7 +393,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Zoom %",
 		description = "Zoom relative to the fitted size",
 		position = 4,
-		section = loginSection
+		hidden = true
 	)
 	default int loginZoom()
 	{
@@ -389,7 +406,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Position X %",
 		description = "Which point of the image sits at the centre. 0 = left, 100 = right",
 		position = 5,
-		section = loginSection
+		hidden = true
 	)
 	default int loginFocalX()
 	{
@@ -402,7 +419,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Position Y %",
 		description = "Which point of the image sits at the centre. 0 = top, 100 = bottom",
 		position = 6,
-		section = loginSection
+		hidden = true
 	)
 	default int loginFocalY()
 	{
@@ -415,7 +432,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Hue shift",
 		description = "Rotates colours around the colour wheel, in degrees",
 		position = 7,
-		section = loginSection
+		hidden = true
 	)
 	default int loginHue()
 	{
@@ -428,7 +445,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Saturation %",
 		description = "0 = grey, 100 = unchanged, 200 = double intensity",
 		position = 8,
-		section = loginSection
+		hidden = true
 	)
 	default int loginSaturation()
 	{
@@ -440,7 +457,7 @@ public interface CleanVisualsConfig extends Config
 		name = "Black & white",
 		description = "Converts the image to greyscale. Overrides hue and saturation",
 		position = 9,
-		section = loginSection
+		hidden = true
 	)
 	default boolean loginGrayscale()
 	{
@@ -449,22 +466,15 @@ public interface CleanVisualsConfig extends Config
 
 	@ConfigItem(
 		keyName = "loginHideFlames",
-		name = "Hide flames",
+		name = "Login screen flames",
 		description = "Hides the burning braziers either side of the login screen",
 		position = 10,
-		section = loginSection
+		section = hideSection
 	)
 	default boolean loginHideFlames()
 	{
 		return false;
 	}
-
-	@ConfigSection(name = "Game UI colour",
-		description = "Recolours the game frame",
-		position = 12,
-		closedByDefault = true
-	)
-	String gameUiSection = "gameUiSection";
 
 	@ConfigItem(
 		keyName = "gameUiRecolour",
@@ -480,9 +490,9 @@ public interface CleanVisualsConfig extends Config
 
 	@ConfigItem(
 		keyName = "gameUiOpacityEnabled",
-		name = "Enable game UI opacity",
+		name = "Enable see-through UI",
 		description = "Makes the game frame see-through",
-		position = 12,
+		position = 6,
 		section = gameUiSection
 	)
 	default boolean gameUiOpacityEnabled()
@@ -495,7 +505,7 @@ public interface CleanVisualsConfig extends Config
 		keyName = "gameUiOpacity",
 		name = "UI see-through",
 		description = "0 = unchanged, 100 = fully see-through. Applies to the groups ticked below",
-		position = 13,
+		position = 7,
 		section = gameUiSection
 	)
 	default int gameUiOpacity()
@@ -543,9 +553,9 @@ public interface CleanVisualsConfig extends Config
 
 	@ConfigItem(
 		keyName = "gameUiMinimap",
-		name = "Apply to: minimap",
+		name = "Minimap",
 		description = "Minimap surround, inner ring and compass",
-		position = 5,
+		position = 10,
 		section = gameUiSection
 	)
 	default boolean gameUiMinimap()
@@ -555,9 +565,9 @@ public interface CleanVisualsConfig extends Config
 
 	@ConfigItem(
 		keyName = "gameUiSidePanelFrame",
-		name = "Apply to: side panel frame",
+		name = "Side panel frame",
 		description = "Side panel edges and the tab icon strips",
-		position = 6,
+		position = 12,
 		section = gameUiSection
 	)
 	default boolean gameUiSidePanelFrame()
@@ -567,9 +577,9 @@ public interface CleanVisualsConfig extends Config
 
 	@ConfigItem(
 		keyName = "gameUiSidePanelBacking",
-		name = "Apply to: side panel backing",
+		name = "Side panel backing",
 		description = "The panel behind the inventory and other tabs",
-		position = 7,
+		position = 14,
 		section = gameUiSection
 	)
 	default boolean gameUiSidePanelBacking()
@@ -579,9 +589,9 @@ public interface CleanVisualsConfig extends Config
 
 	@ConfigItem(
 		keyName = "gameUiChatBar",
-		name = "Apply to: chat bar",
+		name = "Chat bar",
 		description = "The bar holding the chat tabs",
-		position = 8,
+		position = 18,
 		section = gameUiSection
 	)
 	default boolean gameUiChatBar()
@@ -591,9 +601,9 @@ public interface CleanVisualsConfig extends Config
 
 	@ConfigItem(
 		keyName = "gameUiOrbs",
-		name = "Apply to: orbs",
+		name = "Orbs",
 		description = "Hitpoints, prayer, run energy and special attack orbs",
-		position = 9,
+		position = 20,
 		section = gameUiSection
 	)
 	default boolean gameUiOrbs()
@@ -603,9 +613,9 @@ public interface CleanVisualsConfig extends Config
 
 	@ConfigItem(
 		keyName = "gameUiChatTabs",
-		name = "Apply to: chat tabs",
+		name = "Chat tabs",
 		description = "The All / Game / Public / Private tabs under the chatbox, and the report button",
-		position = 10,
+		position = 22,
 		section = gameUiSection
 	)
 	default boolean gameUiChatTabs()
@@ -615,9 +625,9 @@ public interface CleanVisualsConfig extends Config
 
 	@ConfigItem(
 		keyName = "gameUiButtons",
-		name = "Apply to: buttons",
+		name = "Buttons",
 		description = "In-panel buttons such as All Settings, Upgrade Now and View Inbox",
-		position = 11,
+		position = 26,
 		section = gameUiSection
 	)
 	default boolean gameUiButtons()
@@ -627,9 +637,9 @@ public interface CleanVisualsConfig extends Config
 
 	@ConfigItem(
 		keyName = "gameUiTabIcons",
-		name = "Apply to: tab icons",
+		name = "Tab icons",
 		description = "The combat, stats, quests, inventory, prayer and magic tab icons",
-		position = 11,
+		position = 16,
 		section = gameUiSection
 	)
 	default boolean gameUiTabIcons()
@@ -642,7 +652,7 @@ public interface CleanVisualsConfig extends Config
 		keyName = "gameUiTintStrength",
 		name = "Tint strength",
 		description = "How strongly the tint colours below are applied. 0 disables tinting entirely",
-		position = 14,
+		position = 5,
 		section = gameUiSection
 	)
 	default int gameUiTintStrength()
@@ -653,9 +663,9 @@ public interface CleanVisualsConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "gameUiTintMinimap",
-		name = "Tint: minimap",
+		name = "Minimap tint",
 		description = "Recolours the minimap surround to this colour. Fully transparent means no tint",
-		position = 15,
+		position = 11,
 		section = gameUiSection
 	)
 	default Color gameUiTintMinimap()
@@ -666,9 +676,9 @@ public interface CleanVisualsConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "gameUiTintSidePanelFrame",
-		name = "Tint: side panel frame",
+		name = "Side panel frame tint",
 		description = "Recolours the side panel edges and tab strips. Fully transparent means no tint",
-		position = 16,
+		position = 13,
 		section = gameUiSection
 	)
 	default Color gameUiTintSidePanelFrame()
@@ -679,9 +689,9 @@ public interface CleanVisualsConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "gameUiTintSidePanelBacking",
-		name = "Tint: side panel backing",
+		name = "Side panel backing tint",
 		description = "Recolours the panel behind the tabs. Fully transparent means no tint",
-		position = 17,
+		position = 15,
 		section = gameUiSection
 	)
 	default Color gameUiTintSidePanelBacking()
@@ -692,9 +702,9 @@ public interface CleanVisualsConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "gameUiTintTabIcons",
-		name = "Tint: tab icons",
+		name = "Tab icons tint",
 		description = "Recolours the side panel tab icons. Fully transparent means no tint",
-		position = 18,
+		position = 17,
 		section = gameUiSection
 	)
 	default Color gameUiTintTabIcons()
@@ -705,7 +715,7 @@ public interface CleanVisualsConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "gameUiTintChatBar",
-		name = "Tint: chat bar",
+		name = "Chat bar tint",
 		description = "Recolours the bar holding the chat tabs. Fully transparent means no tint",
 		position = 19,
 		section = gameUiSection
@@ -718,9 +728,9 @@ public interface CleanVisualsConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "gameUiTintOrbs",
-		name = "Tint: orbs",
+		name = "Orbs tint",
 		description = "Recolours the hitpoints, prayer, run and special orbs. Fully transparent means no tint",
-		position = 20,
+		position = 21,
 		section = gameUiSection
 	)
 	default Color gameUiTintOrbs()
@@ -731,9 +741,9 @@ public interface CleanVisualsConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "gameUiTintChatTabs",
-		name = "Tint: chat tabs",
+		name = "Chat tabs tint",
 		description = "Recolours the All / Game / Public tabs. Fully transparent means no tint",
-		position = 21,
+		position = 23,
 		section = gameUiSection
 	)
 	default Color gameUiTintChatTabs()
@@ -744,9 +754,9 @@ public interface CleanVisualsConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "gameUiTintButtons",
-		name = "Tint: buttons",
+		name = "Buttons tint",
 		description = "Recolours in-panel buttons. Fully transparent means no tint",
-		position = 22,
+		position = 27,
 		section = gameUiSection
 	)
 	default Color gameUiTintButtons()
@@ -756,9 +766,9 @@ public interface CleanVisualsConfig extends Config
 
 	@ConfigItem(
 		keyName = "gameUiScrollbars",
-		name = "Apply to: scrollbars",
+		name = "Scrollbars",
 		description = "Scrollbar troughs, draggers and separators across every interface",
-		position = 11,
+		position = 24,
 		section = gameUiSection
 	)
 	default boolean gameUiScrollbars()
@@ -769,9 +779,9 @@ public interface CleanVisualsConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "gameUiTintScrollbars",
-		name = "Tint: scrollbars",
+		name = "Scrollbars tint",
 		description = "Recolours scrollbars. Fully transparent means no tint",
-		position = 23,
+		position = 25,
 		section = gameUiSection
 	)
 	default Color gameUiTintScrollbars()
@@ -779,16 +789,9 @@ public interface CleanVisualsConfig extends Config
 		return NO_TINT;
 	}
 
-	@ConfigSection(name = "Hide UI parts",
-		description = "Removes interface decoration entirely. Affects every interface sharing those sprites",
-		position = 13,
-		closedByDefault = true
-	)
-	String hideSection = "hideSection";
-
 	@ConfigItem(
 		keyName = "hideMinimap",
-		name = "Hide minimap surround",
+		name = "Minimap surround",
 		description = "Removes the stone frame around the minimap",
 		position = 1,
 		section = hideSection
@@ -800,7 +803,7 @@ public interface CleanVisualsConfig extends Config
 
 	@ConfigItem(
 		keyName = "hideSidePanelFrame",
-		name = "Hide side panel frame",
+		name = "Side panel frame",
 		description = "Removes the side panel edges and the tab icon strips",
 		position = 2,
 		section = hideSection
@@ -812,7 +815,7 @@ public interface CleanVisualsConfig extends Config
 
 	@ConfigItem(
 		keyName = "hideSidePanelBacking",
-		name = "Hide side panel backing",
+		name = "Side panel backing",
 		description = "Removes the panel behind the tabs. Also affects the trade and bank backdrops",
 		position = 3,
 		section = hideSection
@@ -824,9 +827,9 @@ public interface CleanVisualsConfig extends Config
 
 	@ConfigItem(
 		keyName = "hideChatBar",
-		name = "Hide chat bar",
+		name = "Chat bar",
 		description = "Removes the bar holding the chat tabs",
-		position = 4,
+		position = 5,
 		section = hideSection
 	)
 	default boolean hideChatBar()
@@ -836,9 +839,9 @@ public interface CleanVisualsConfig extends Config
 
 	@ConfigItem(
 		keyName = "hideChatTabs",
-		name = "Hide chat tabs",
+		name = "Chat tabs",
 		description = "Removes the All / Game / Public tab buttons and the report button",
-		position = 5,
+		position = 7,
 		section = hideSection
 	)
 	default boolean hideChatTabs()
@@ -848,7 +851,7 @@ public interface CleanVisualsConfig extends Config
 
 	@ConfigItem(
 		keyName = "hideOrbs",
-		name = "Hide orb surrounds",
+		name = "Orb surrounds",
 		description = "Removes the frames around the hitpoints, prayer, run and special orbs",
 		position = 6,
 		section = hideSection
@@ -860,9 +863,9 @@ public interface CleanVisualsConfig extends Config
 
 	@ConfigItem(
 		keyName = "hideScrollbars",
-		name = "Hide scrollbars",
+		name = "Scrollbars",
 		description = "Removes scrollbar troughs and draggers. They still work, they are just invisible",
-		position = 7,
+		position = 8,
 		section = hideSection
 	)
 	default boolean hideScrollbars()
@@ -872,9 +875,9 @@ public interface CleanVisualsConfig extends Config
 
 	@ConfigItem(
 		keyName = "hideButtons",
-		name = "Hide button backgrounds",
+		name = "Button backgrounds",
 		description = "Removes the tiled backing behind in-panel buttons, leaving their text",
-		position = 8,
+		position = 9,
 		section = hideSection
 	)
 	default boolean hideButtons()
@@ -882,16 +885,177 @@ public interface CleanVisualsConfig extends Config
 		return false;
 	}
 
-
 	@ConfigItem(
-		keyName = "showDiagnostics",
-		name = "Show diagnostics",
-		description = "Debug overlay: detected game mode, chatbox transparency varbit, resolved bounds and transform values",
-		position = 99,
-		section = chatboxSection
+		keyName = "sidePanelBorder",
+		name = "Enable custom border",
+		description = "Draws your own border around the side panel. Resizable layouts only. Looks best with the "
+			+ "game's own border hidden, under Hide UI parts",
+		position = 1,
+		section = borderSection
 	)
-	default boolean showDiagnostics()
+	default boolean sidePanelBorder()
 	{
 		return false;
+	}
+
+	@ConfigItem(
+		keyName = "sidePanelBorderStyle",
+		name = "Style",
+		description = "How the border is drawn",
+		position = 2,
+		section = borderSection
+	)
+	default BorderStyle sidePanelBorderStyle()
+	{
+		return BorderStyle.SOLID;
+	}
+
+	@ConfigItem(
+		keyName = "sidePanelBorderColour",
+		name = "Colour",
+		description = "The border's colour",
+		position = 3,
+		section = borderSection
+	)
+	default Color sidePanelBorderColour()
+	{
+		return new Color(60, 60, 60);
+	}
+
+	@Range(min = 1, max = 12)
+	@ConfigItem(
+		keyName = "sidePanelBorderThickness",
+		name = "Thickness",
+		description = "How thick the border is, in pixels",
+		position = 4,
+		section = borderSection
+	)
+	default int sidePanelBorderThickness()
+	{
+		return 3;
+	}
+
+	@Range(min = 0, max = 100)
+	@ConfigItem(
+		keyName = "sidePanelBorderOpacity",
+		name = "Opacity",
+		description = "How solid the border is. 0 = invisible, 100 = fully solid",
+		position = 5,
+		section = borderSection
+	)
+	default int sidePanelBorderOpacity()
+	{
+		return 100;
+	}
+	@ConfigItem(
+		keyName = "chatboxBorder",
+		name = "Enable custom border",
+		description = "Draws your own border around the chatbox. Resizable layouts only",
+		position = 1,
+		section = chatboxBorderSection
+	)
+	default boolean chatboxBorder()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "chatboxBorderStyle",
+		name = "Style",
+		description = "How the border is drawn",
+		position = 2,
+		section = chatboxBorderSection
+	)
+	default BorderStyle chatboxBorderStyle()
+	{
+		return BorderStyle.SOLID;
+	}
+
+	@ConfigItem(
+		keyName = "chatboxBorderColour",
+		name = "Colour",
+		description = "The border's colour",
+		position = 3,
+		section = chatboxBorderSection
+	)
+	default Color chatboxBorderColour()
+	{
+		return new Color(60, 60, 60);
+	}
+
+	@Range(min = 1, max = 12)
+	@ConfigItem(
+		keyName = "chatboxBorderThickness",
+		name = "Thickness",
+		description = "How thick the border is, in pixels",
+		position = 4,
+		section = chatboxBorderSection
+	)
+	default int chatboxBorderThickness()
+	{
+		return 3;
+	}
+
+	@Range(min = 0, max = 100)
+	@ConfigItem(
+		keyName = "chatboxBorderOpacity",
+		name = "Opacity",
+		description = "How solid the border is. 0 = invisible, 100 = fully solid",
+		position = 5,
+		section = chatboxBorderSection
+	)
+	default int chatboxBorderOpacity()
+	{
+		return 100;
+	}
+	@ConfigItem(
+		keyName = "chatReportColourEnabled",
+		name = "Keep report button coloured",
+		description = "Gives the report button its own colour, so black & white and the chat tab tint do not "
+			+ "apply to it. Opacity still does",
+		position = 1,
+		section = chatTabsSection
+	)
+	default boolean chatReportColourEnabled()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "chatReportColour",
+		name = "Report button colour",
+		description = "The colour the report button is tinted",
+		position = 2,
+		section = chatTabsSection
+	)
+	default Color chatReportColour()
+	{
+		return Color.RED;
+	}
+
+	@ConfigItem(
+		keyName = "chatNotifyColourEnabled",
+		name = "Keep new message flash visible",
+		description = "The flash that marks unread messages keeps its own colour instead of being greyscaled, "
+			+ "so a notification is still noticeable on a black & white frame. It fades with UI "
+			+ "see-through like everything else",
+		position = 3,
+		section = chatTabsSection
+	)
+	default boolean chatNotifyColourEnabled()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "chatNotifyColour",
+		name = "New message flash colour",
+		description = "The colour the unread message flash is tinted",
+		position = 4,
+		section = chatTabsSection
+	)
+	default Color chatNotifyColour()
+	{
+		return Color.RED;
 	}
 }

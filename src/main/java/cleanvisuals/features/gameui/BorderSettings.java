@@ -23,63 +23,54 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package cleanvisuals.features.backgrounds;
+package cleanvisuals.features.gameui;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
-import net.runelite.api.Client;
-import net.runelite.api.gameval.InterfaceID;
-import net.runelite.api.gameval.SpriteID;
-import net.runelite.api.widgets.Widget;
-import net.runelite.client.callback.ClientThread;
-import cleanvisuals.CleanVisualsConfig;
+import java.awt.Color;
 
 /**
- * Background behind the chatbox.
+ * One region's border settings, read fresh from config each frame.
+ * <p>
+ * Clamping lives here rather than at each call site, so a value edited directly in the config
+ * file cannot reach the drawing code out of range.
  */
-@Singleton
-public class ChatboxBackgroundOverlay extends RegionBackgroundOverlay
+public class BorderSettings
 {
-	private final CleanVisualsConfig config;
+	private static final int MIN_THICKNESS = 1;
+	private static final int MAX_THICKNESS = 12;
 
-	@Inject
-	ChatboxBackgroundOverlay(Client client, ClientThread clientThread, CleanVisualsConfig config)
+	private final BorderStyle style;
+	private final Color colour;
+	private final int thickness;
+	private final int opacity;
+
+	public BorderSettings(BorderStyle style, Color colour, int thickness, int opacity)
 	{
-		super(client, clientThread);
-		this.config = config;
+		this.style = style;
+		this.colour = colour;
+		this.thickness = thickness;
+		this.opacity = opacity;
 	}
 
-	@Override
-	public boolean isEnabled(CleanVisualsConfig config)
+	public BorderStyle getStyle()
 	{
-		return config.chatboxBackground();
+		return style == null ? BorderStyle.SOLID : style;
 	}
 
-	@Override
-	protected Widget boundsWidget()
+	public Color getColour()
 	{
-		return client.getWidget(InterfaceID.Chatbox.CHAT_BACKGROUND);
+		return colour == null ? Color.BLACK : colour;
 	}
 
-	@Override
-	protected int obstructionSpriteId()
+	public int getThickness()
 	{
-		return SpriteID.CHAT_BACKGROUND;
+		return Math.max(MIN_THICKNESS, Math.min(MAX_THICKNESS, thickness));
 	}
 
-	@Override
-	protected RegionSettings settings()
+	/**
+	 * Opacity as a composite alpha, 0 to 1.
+	 */
+	public float getAlpha()
 	{
-		return new RegionSettings(
-			config.chatboxImagePath(),
-			config.chatboxFit(),
-			config.chatboxZoom(),
-			config.chatboxFocalX(),
-			config.chatboxFocalY(),
-			config.chatboxHue(),
-			config.chatboxSaturation(),
-			config.chatboxGrayscale(),
-			config.chatboxImageOpacity(),
-			config.chatboxWidgetTransparency());
+		return Math.max(0, Math.min(100, opacity)) / 100f;
 	}
 }

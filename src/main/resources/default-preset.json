@@ -1,0 +1,103 @@
+{
+  "name": "Welcome to Clean Visuals",
+  "regions": {
+    "chatbox": {
+      "imagePath": "",
+      "fit": "FIT",
+      "zoomPercent": 121,
+      "focalXPercent": 50,
+      "focalYPercent": 53,
+      "hueShiftDegrees": 0,
+      "saturationPercent": 100,
+      "grayscale": true,
+      "imageOpacity": 25,
+      "widgetTransparency": 100
+    },
+    "inventory": {
+      "imagePath": "",
+      "fit": "FILL",
+      "zoomPercent": 100,
+      "focalXPercent": 50,
+      "focalYPercent": 53,
+      "hueShiftDegrees": 0,
+      "saturationPercent": 100,
+      "grayscale": true,
+      "imageOpacity": 35,
+      "widgetTransparency": 100
+    },
+    "login": {
+      "imagePath": "",
+      "fit": "FILL",
+      "zoomPercent": 100,
+      "focalXPercent": 50,
+      "focalYPercent": 50,
+      "hueShiftDegrees": 0,
+      "saturationPercent": 100,
+      "grayscale": false,
+      "imageOpacity": 100,
+      "widgetTransparency": 100
+    }
+  },
+  "gameUi": {
+    "recolourEnabled": true,
+    "hueShiftDegrees": 0,
+    "saturationPercent": 100,
+    "grayscale": true,
+    "tintStrength": 100,
+    "tints": {
+      "MINIMAP": "0",
+      "SIDE_PANEL_FRAME": "0",
+      "SIDE_PANEL_BACKING": "0",
+      "TAB_ICONS": "0",
+      "CHAT_BAR": "0",
+      "ORBS": "0",
+      "CHAT_TABS": "0",
+      "BUTTONS": "0",
+      "SCROLLBARS": "0"
+    },
+    "groups": {
+      "MINIMAP": true,
+      "SIDE_PANEL_FRAME": true,
+      "SIDE_PANEL_BACKING": true,
+      "TAB_ICONS": false,
+      "CHAT_BAR": true,
+      "ORBS": true,
+      "CHAT_TABS": true,
+      "BUTTONS": false,
+      "SCROLLBARS": false
+    },
+    "opacityEnabled": true,
+    "opacityPercent": 70,
+    "hideSidePanelBorder": true,
+    "hidden": {
+      "MINIMAP": false,
+      "SIDE_PANEL_FRAME": false,
+      "SIDE_PANEL_BACKING": false,
+      "CHAT_BAR": false,
+      "CHAT_TABS": false,
+      "ORBS": false,
+      "SCROLLBARS": false,
+      "BUTTONS": false
+    },
+    "reportColourEnabled": true,
+    "reportColour": "-65536",
+    "notifyColourEnabled": true,
+    "notifyColour": "-65536"
+  },
+  "borders": {
+    "inventory": {
+      "enabled": false,
+      "style": "SOLID",
+      "colour": "-12829636",
+      "thickness": 1,
+      "opacity": 100
+    },
+    "chatbox": {
+      "enabled": false,
+      "style": "SOLID",
+      "colour": "-12829636",
+      "thickness": 1,
+      "opacity": 100
+    }
+  }
+}
