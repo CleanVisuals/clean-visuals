@@ -5,7 +5,7 @@ Custom backgrounds and interface theming for RuneLite.
 Put an image or animated GIF behind the chatbox, the side panel and the login screen, recolour or
 hide the surrounding game frame, and draw your own borders.
 
-**[Join the Discord](https://discord.gg/NaQqKakYY)** — get help, report bugs.
+**[Join the Discord](https://discord.gg/2YXJSB69S)** — get help, report bugs.
 
 ---
 
@@ -137,7 +137,7 @@ Provided as-is: issues and feature requests may not be actioned, and it is shape
 person uses the game.
 
 Bug reports are still welcome, particularly anything that breaks after a RuneLite update — either
-in [issues](../../issues) or on the [Discord](https://discord.gg/NaQqKakYY).
+in [issues](../../issues) or on the [Discord](https://discord.gg/2YXJSB69S).
 
 ---
 
